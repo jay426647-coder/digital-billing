@@ -10,6 +10,7 @@ export default function ConsumersPage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [search, setSearch] = useState('');
 
   const [form, setForm] = useState({
     consumer_id_str: '',
@@ -118,6 +119,17 @@ export default function ConsumersPage() {
     }
   }
 
+  const filteredConsumers = consumers.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.consumer_id_str.toLowerCase().includes(q) ||
+      c.mobile_number.includes(q) ||
+      String(c.ward_number).includes(q)
+    );
+  });
+
   if (checkingAuth) {
     return (
       <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
@@ -220,40 +232,57 @@ export default function ConsumersPage() {
         </form>
       )}
 
+      <div style={{ marginBottom: '15px' }}>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Naam, Consumer ID, Ward ya Mobile se dhundo..."
+          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px', background: '#fff' }}
+        />
+      </div>
+
       {loading ? (
         <p>Loading...</p>
       ) : consumers.length === 0 ? (
         <p style={{ color: '#6b7280' }}>Abhi koi consumer add nahi hua hai.</p>
+      ) : filteredConsumers.length === 0 ? (
+        <p style={{ color: '#6b7280' }}>Search se koi consumer nahi mila.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {consumers.map((c) => (
-            <div
-              key={c.id}
-              style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            >
-              <div>
-                <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{c.name}</p>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                  ID: {c.consumer_id_str} • Ward {c.ward_number} • {c.mobile_number}
-                </p>
+        <>
+          <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '10px' }}>
+            {filteredConsumers.length} consumer{filteredConsumers.length !== 1 ? 's' : ''} mile
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {filteredConsumers.map((c) => (
+              <div
+                key={c.id}
+                style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <div>
+                  <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{c.name}</p>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                    ID: {c.consumer_id_str} • Ward {c.ward_number} • {c.mobile_number}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleEdit(c)}
+                    style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => handleEdit(c)}
-                  style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
