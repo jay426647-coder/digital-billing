@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
+const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export default function ConsumersPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [consumers, setConsumers] = useState([]);
@@ -18,6 +20,16 @@ export default function ConsumersPage() {
     ward_number: '',
     mobile_number: '',
   });
+
+  const [expandedId, setExpandedId] = useState(null);
+  const [historyCache, setHistoryCache] = useState({});
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const statusColors = {
+    PAID: { bg: '#ecfdf5', text: '#065f46' },
+    PENDING: { bg: '#fffbeb', text: '#92400e' },
+    OVERDUE: { bg: '#fff1f2', text: '#9f1239' },
+  };
 
   useEffect(() => {
     async function checkAuth() {
@@ -116,6 +128,30 @@ export default function ConsumersPage() {
       setError(error.message);
     } else {
       fetchConsumers();
+    }
+  }
+
+  async function toggleHistory(consumerId) {
+    if (expandedId === consumerId) {
+      setExpandedId(null);
+      return;
+    }
+
+    setExpandedId(consumerId);
+
+    if (!historyCache[consumerId]) {
+      setHistoryLoading(true);
+      const { data, error } = await supabase
+        .from('bills')
+        .select('*')
+        .eq('consumer_id', consumerId)
+        .order('financial_year', { ascending: false })
+        .order('month', { ascending: false });
+
+      if (!error) {
+        setHistoryCache((prev) => ({ ...prev, [consumerId]: data || [] }));
+      }
+      setHistoryLoading(false);
     }
   }
 
@@ -257,28 +293,75 @@ export default function ConsumersPage() {
             {filteredConsumers.map((c) => (
               <div
                 key={c.id}
-                style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}
               >
-                <div>
-                  <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{c.name}</p>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    ID: {c.consumer_id_str} • Ward {c.ward_number} • {c.mobile_number}
-                  </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{c.name}</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                      ID: {c.consumer_id_str} • Ward {c.ward_number} • {c.mobile_number}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => handleEdit(c)}
+                      style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => handleEdit(c)}
-                    style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    Delete
-                  </button>
-                </div>
+
+                <button
+                  onClick={() => toggleHistory(c.id)}
+                  style={{ background: '#f3f4f6', color: '#374151', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', marginTop: '10px', width: '100%' }}
+                >
+                  {expandedId === c.id ? '▲ History Chhupao' : '▼ Bill History Dekho'}
+                </button>
+
+                {expandedId === c.id && (
+                  <div style={{ marginTop: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>
+                    {historyLoading && !historyCache[c.id] ? (
+                      <p style={{ fontSize: '12px', color: '#6b7280' }}>Loading...</p>
+                    ) : (historyCache[c.id] || []).length === 0 ? (
+                      <p style={{ fontSize: '12px', color: '#6b7280' }}>Is consumer ka abhi koi bill nahi bana hai.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {historyCache[c.id].map((b) => {
+                          const colors = statusColors[b.status] || statusColors.PENDING;
+                          return (
+                            <div
+                              key={b.id}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9fafb', borderRadius: '6px', padding: '8px 10px' }}
+                            >
+                              <span style={{ fontSize: '12px', color: '#374151' }}>
+                                {monthNames[b.month]} {b.financial_year} — ₹{b.amount}
+                              </span>
+                              <span
+                                style={{
+                                  background: colors.bg,
+                                  color: colors.text,
+                                  padding: '2px 8px',
+                                  borderRadius: '20px',
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                }}
+                              >
+                                {b.status}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
