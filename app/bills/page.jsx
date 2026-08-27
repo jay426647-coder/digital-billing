@@ -5,13 +5,14 @@ import { supabase } from '../../lib/supabaseClient';
 
 function getCurrentMonthYear() {
   const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
+  const month = now.getMonth() + 1;
   const year = now.getFullYear();
   const financial_year = month >= 4 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
   return { month, financial_year, label: now.toLocaleString('en-IN', { month: 'long', year: 'numeric' }) };
 }
 
 export default function BillsPage() {
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [bills, setBills] = useState([]);
   const [consumers, setConsumers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,23 @@ export default function BillsPage() {
   const [filter, setFilter] = useState('ALL');
 
   const { month, financial_year, label } = getCurrentMonthYear();
+
+  useEffect(() => {
+    async function checkAuth() {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        window.location.href = '/login';
+        return;
+      }
+      setCheckingAuth(false);
+    }
+    checkAuth();
+  }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  }
 
   async function fetchData() {
     setLoading(true);
@@ -44,8 +62,10 @@ export default function BillsPage() {
   }
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!checkingAuth) {
+      fetchData();
+    }
+  }, [checkingAuth]);
 
   async function handleGenerateBills() {
     setError('');
@@ -125,9 +145,25 @@ export default function BillsPage() {
     OVERDUE: { bg: '#fff1f2', text: '#9f1239' },
   };
 
+  if (checkingAuth) {
+    return (
+      <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <h2 style={{ color: '#333', marginBottom: '5px' }}>🧾 Bills / Billing</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+        <h2 style={{ color: '#333', margin: 0 }}>🧾 Bills / Billing</h2>
+        <button
+          onClick={handleLogout}
+          style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+        >
+          Logout
+        </button>
+      </div>
       <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
         Current cycle: {label}
       </p>
