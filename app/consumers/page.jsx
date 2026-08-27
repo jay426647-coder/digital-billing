@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function ConsumersPage() {
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [consumers, setConsumers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,6 +17,23 @@ export default function ConsumersPage() {
     ward_number: '',
     mobile_number: '',
   });
+
+  useEffect(() => {
+    async function checkAuth() {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        window.location.href = '/login';
+        return;
+      }
+      setCheckingAuth(false);
+    }
+    checkAuth();
+  }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  }
 
   async function fetchConsumers() {
     setLoading(true);
@@ -34,8 +52,10 @@ export default function ConsumersPage() {
   }
 
   useEffect(() => {
-    fetchConsumers();
-  }, []);
+    if (!checkingAuth) {
+      fetchConsumers();
+    }
+  }, [checkingAuth]);
 
   function resetForm() {
     setForm({ consumer_id_str: '', name: '', ward_number: '', mobile_number: '' });
@@ -98,9 +118,25 @@ export default function ConsumersPage() {
     }
   }
 
+  if (checkingAuth) {
+    return (
+      <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <h2 style={{ color: '#333', marginBottom: '20px' }}>👥 Consumers / Households</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ color: '#333', margin: 0 }}>👥 Consumers / Households</h2>
+        <button
+          onClick={handleLogout}
+          style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+        >
+          Logout
+        </button>
+      </div>
 
       <button
         onClick={() => {
