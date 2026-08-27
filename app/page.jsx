@@ -43,7 +43,7 @@ export default function DigitalBillingDashboard() {
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
       <h2 style={{ color: '#333', marginBottom: '20px' }}>📱 Digital Billing - Panchayat Dashboard</h2>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
         <a href="/consumers" style={{ textDecoration: 'none', flex: 1 }}>
           <div style={{ background: '#2563eb', color: '#fff', textAlign: 'center', padding: '10px', borderRadius: '10px', fontSize: '13px' }}>
             👥 Consumers
@@ -55,6 +55,12 @@ export default function DigitalBillingDashboard() {
           </div>
         </a>
       </div>
+
+      <a href="/mybill" style={{ textDecoration: 'none', display: 'block', marginBottom: '20px' }}>
+        <div style={{ background: '#059669', color: '#fff', textAlign: 'center', padding: '10px', borderRadius: '10px', fontSize: '13px' }}>
+          🔍 Apna Bill Dekhein
+        </div>
+      </a>
 
       {loading ? (
         <p>Loading...</p>
