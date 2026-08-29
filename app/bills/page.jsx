@@ -13,6 +13,7 @@ function getCurrentMonthYear() {
 
 export default function BillsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [panchayatId, setPanchayatId] = useState(null);
   const [bills, setBills] = useState([]);
   const [consumers, setConsumers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,20 @@ export default function BillsPage() {
         window.location.href = '/login';
         return;
       }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('panchayat_id')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        setError('Aapka account kisi panchayat se link nahi hai. Admin se sampark karein.');
+        setCheckingAuth(false);
+        return;
+      }
+
+      setPanchayatId(profile.panchayat_id);
       setCheckingAuth(false);
     }
     checkAuth();
@@ -62,10 +77,10 @@ export default function BillsPage() {
   }
 
   useEffect(() => {
-    if (!checkingAuth) {
+    if (!checkingAuth && panchayatId) {
       fetchData();
     }
-  }, [checkingAuth]);
+  }, [checkingAuth, panchayatId]);
 
   async function handleGenerateBills() {
     setError('');
@@ -87,7 +102,7 @@ export default function BillsPage() {
       .filter((c) => !existingConsumerIds.has(c.id))
       .map((c) => ({
         consumer_id: c.id,
-        panchayat_id: c.panchayat_id || null,
+        panchayat_id: panchayatId,
         financial_year,
         month,
         amount: parseFloat(amount),
@@ -164,125 +179,130 @@ export default function BillsPage() {
           Logout
         </button>
       </div>
-      <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
-        Current cycle: {label}
-      </p>
-
-      <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
-        <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
-          Amount per Consumer (₹)
-        </label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '12px' }}
-        />
-        <button
-          onClick={handleGenerateBills}
-          disabled={generating}
-          style={{
-            background: generating ? '#9ca3af' : '#2563eb',
-            color: '#fff',
-            border: 'none',
-            padding: '10px 16px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            cursor: generating ? 'default' : 'pointer',
-            width: '100%',
-          }}
-        >
-          {generating ? 'Generate ho raha hai...' : `⚡ Sabhi Consumers ke liye ${label} ka Bill Generate Karo`}
-        </button>
-      </div>
 
       {error && (
-        <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px' }}>
+        <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginTop: '15px', marginBottom: '15px', fontSize: '13px' }}>
           {error}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
-        {['ALL', 'PENDING', 'PAID', 'OVERDUE'].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              background: filter === f ? '#111827' : '#e5e7eb',
-              color: filter === f ? '#fff' : '#374151',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              cursor: 'pointer',
-            }}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
+      {!panchayatId ? null : (
+        <>
+          <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
+            Current cycle: {label}
+          </p>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : filteredBills.length === 0 ? (
-        <p style={{ color: '#6b7280' }}>Koi bill nahi mila.</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredBills.map((b) => {
-            const colors = statusColors[b.status] || statusColors.PENDING;
-            return (
-              <div
-                key={b.id}
-                style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}
+          <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+            <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
+              Amount per Consumer (₹)
+            </label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '12px' }}
+            />
+            <button
+              onClick={handleGenerateBills}
+              disabled={generating}
+              style={{
+                background: generating ? '#9ca3af' : '#2563eb',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: generating ? 'default' : 'pointer',
+                width: '100%',
+              }}
+            >
+              {generating ? 'Generate ho raha hai...' : `⚡ Sabhi Consumers ke liye ${label} ka Bill Generate Karo`}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
+            {['ALL', 'PENDING', 'PAID', 'OVERDUE'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  background: filter === f ? '#111827' : '#e5e7eb',
+                  color: filter === f ? '#fff' : '#374151',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>
-                      {b.consumers?.name || 'Unknown'}
-                    </p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                      ID: {b.consumers?.consumer_id_str} • Ward {b.consumers?.ward_number} • {b.financial_year}, Month {b.month}
-                    </p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
-                      ₹ {b.amount}
-                    </p>
-                  </div>
-                  <span
-                    style={{
-                      background: colors.bg,
-                      color: colors.text,
-                      padding: '4px 10px',
-                      borderRadius: '20px',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    {b.status}
-                  </span>
-                </div>
+                {f}
+              </button>
+            ))}
+          </div>
 
-                {b.status !== 'PAID' && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <button
-                      onClick={() => markPaid(b.id)}
-                      style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-                    >
-                      Mark Paid (Cash)
-                    </button>
-                    {b.status !== 'OVERDUE' && (
-                      <button
-                        onClick={() => markOverdue(b.id)}
-                        style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+          {loading ? (
+            <p>Loading...</p>
+          ) : filteredBills.length === 0 ? (
+            <p style={{ color: '#6b7280' }}>Koi bill nahi mila.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {filteredBills.map((b) => {
+                const colors = statusColors[b.status] || statusColors.PENDING;
+                return (
+                  <div
+                    key={b.id}
+                    style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>
+                          {b.consumers?.name || 'Unknown'}
+                        </p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                          ID: {b.consumers?.consumer_id_str} • Ward {b.consumers?.ward_number} • {b.financial_year}, Month {b.month}
+                        </p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
+                          ₹ {b.amount}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          background: colors.bg,
+                          color: colors.text,
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                        }}
                       >
-                        Mark Overdue
-                      </button>
+                        {b.status}
+                      </span>
+                    </div>
+
+                    {b.status !== 'PAID' && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                        <button
+                          onClick={() => markPaid(b.id)}
+                          style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          Mark Paid (Cash)
+                        </button>
+                        {b.status !== 'OVERDUE' && (
+                          <button
+                            onClick={() => markOverdue(b.id)}
+                            style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                          >
+                            Mark Overdue
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
