@@ -82,7 +82,7 @@ export default function SignupPage() {
           <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
             Aapki panchayat "{panchayatName}" register ho gayi hai. Ab login karke shuru karein.
           </p>
-          
+          <a
             href="/login"
             style={{
               display: 'block',
