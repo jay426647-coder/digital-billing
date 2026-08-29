@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/generate-bills",
-      "schedule": "0 0 1 * *"
-    }
-  ]
-}
