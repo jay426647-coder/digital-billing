@@ -1,8 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const secretFromUrl = searchParams.get('secret');
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isValid =
+    authHeader === `Bearer ${process.env.CRON_SECRET}` ||
+    secretFromUrl === process.env.CRON_SECRET;
+
+  if (!isValid) {
     return new Response('Unauthorized', { status: 401 });
   }
 
