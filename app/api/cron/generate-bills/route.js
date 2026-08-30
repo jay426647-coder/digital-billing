@@ -12,8 +12,8 @@ export async function GET(request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    const supabase = createClient(
+    'https://yifeyrosuuhwubrgzdaz.supabase.co',
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
