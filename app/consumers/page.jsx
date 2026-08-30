@@ -2,8 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import * as XLSX from 'xlsx';
 
 const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const nameAliases = ['name', 'naam', 'consumername', 'consumer'];
+const wardAliases = ['ward', 'wardnumber', 'wardno', 'wardn', 'wardnum'];
+const mobileAliases = ['mobile', 'mobilenumber', 'mobileno', 'phone', 'phonenumber', 'contact', 'contactnumber'];
+
+function normalizeKey(k) {
+  return k.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function extractField(row, aliases) {
+  for (const key of Object.keys(row)) {
+    if (aliases.includes(normalizeKey(key))) {
+      return row[key];
+    }
+  }
+  return '';
+}
 
 export default function ConsumersPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -25,6 +43,14 @@ export default function ConsumersPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [historyCache, setHistoryCache] = useState({});
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Bulk upload state
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkRows, setBulkRows] = useState([]);
+  const [bulkSkipped, setBulkSkipped] = useState(0);
+  const [bulkError, setBulkError] = useState('');
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkResult, setBulkResult] = useState('');
 
   const statusColors = {
     PAID: { bg: '#ecfdf5', text: '#065f46' },
@@ -171,6 +197,101 @@ export default function ConsumersPage() {
     }
   }
 
+  function resetBulk() {
+    setShowBulkUpload(false);
+    setBulkRows([]);
+    setBulkSkipped(0);
+    setBulkError('');
+    setBulkResult('');
+  }
+
+  function handleBulkFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setBulkError('');
+    setBulkResult('');
+    setBulkRows([]);
+    setBulkSkipped(0);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+
+        const parsed = [];
+        let skipped = 0;
+
+        json.forEach((row) => {
+          const name = String(extractField(row, nameAliases)).trim();
+          const wardRaw = String(extractField(row, wardAliases)).trim();
+          const mobile = String(extractField(row, mobileAliases)).trim();
+          const wardNum = parseInt(wardRaw, 10);
+
+          if (!name || !mobile || isNaN(wardNum)) {
+            if (name || wardRaw || mobile) skipped++;
+            return;
+          }
+
+          parsed.push({ name, ward_number: wardNum, mobile_number: mobile });
+        });
+
+        if (parsed.length === 0) {
+          setBulkError('Koi valid row nahi mili. File me "Name", "Ward" aur "Mobile" columns hone chahiye.');
+          return;
+        }
+
+        setBulkRows(parsed);
+        setBulkSkipped(skipped);
+      } catch (err) {
+        setBulkError('File padhne me dikkat aayi. Sahi Excel (.xlsx) ya CSV file try karein.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function handleBulkConfirm() {
+    setBulkUploading(true);
+    setBulkError('');
+
+    let maxNum = 0;
+    consumers.forEach((c) => {
+      const match = String(c.consumer_id_str).match(/(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+
+    const payload = bulkRows.map((row, idx) => {
+      const num = maxNum + idx + 1;
+      return {
+        consumer_id_str: 'C' + String(num).padStart(3, '0'),
+        name: row.name,
+        ward_number: row.ward_number,
+        mobile_number: row.mobile_number,
+        panchayat_id: panchayatId,
+      };
+    });
+
+    const { error } = await supabase.from('consumers').insert(payload);
+
+    if (error) {
+      setBulkError(error.message);
+      setBulkUploading(false);
+      return;
+    }
+
+    setBulkResult(`${payload.length} consumers safaltapoorvak add ho gaye!`);
+    setBulkRows([]);
+    setBulkUploading(false);
+    fetchConsumers();
+  }
+
   const filteredConsumers = consumers.filter((c) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -210,27 +331,126 @@ export default function ConsumersPage() {
 
       {!panchayatId ? null : (
         <>
-          <button
-            onClick={() => {
-              if (showForm) {
-                resetForm();
-              } else {
-                setShowForm(true);
-              }
-            }}
-            style={{
-              background: showForm ? '#6b7280' : '#2563eb',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              marginBottom: '15px',
-              cursor: 'pointer',
-            }}
-          >
-            {showForm ? 'Cancel' : '+ Naya Consumer Add Karo'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
+            <button
+              onClick={() => {
+                if (showForm) {
+                  resetForm();
+                } else {
+                  setShowForm(true);
+                  resetBulk();
+                }
+              }}
+              style={{
+                background: showForm ? '#6b7280' : '#2563eb',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              {showForm ? 'Cancel' : '+ Naya Consumer Add Karo'}
+            </button>
+
+            <button
+              onClick={() => {
+                if (showBulkUpload) {
+                  resetBulk();
+                } else {
+                  setShowBulkUpload(true);
+                  resetForm();
+                }
+              }}
+              style={{
+                background: showBulkUpload ? '#6b7280' : '#059669',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              {showBulkUpload ? 'Cancel' : '📊 Excel/CSV Se Upload Karo'}
+            </button>
+          </div>
+
+          {showBulkUpload && (
+            <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+              <p style={{ fontSize: '13px', color: '#374151', marginTop: 0 }}>
+                Excel (.xlsx) ya CSV file upload karein. File me ye columns hone chahiye: <b>Name</b>, <b>Ward</b>, <b>Mobile</b> (column ke naam thoda alag ho to bhi chalega — jaise "Naam", "Ward Number", "Mobile Number"). Consumer ID system khud generate kar dega.
+              </p>
+
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleBulkFile}
+                style={{ marginBottom: '10px', fontSize: '13px' }}
+              />
+
+              {bulkError && (
+                <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginTop: '10px', fontSize: '13px' }}>
+                  {bulkError}
+                </div>
+              )}
+
+              {bulkResult && (
+                <div style={{ background: '#ecfdf5', color: '#065f46', padding: '10px', borderRadius: '8px', marginTop: '10px', fontSize: '13px' }}>
+                  ✅ {bulkResult}
+                </div>
+              )}
+
+              {bulkRows.length > 0 && (
+                <>
+                  <div style={{ marginTop: '15px', marginBottom: '10px' }}>
+                    <p style={{ fontSize: '13px', color: '#374151', fontWeight: 'bold', margin: 0 }}>
+                      {bulkRows.length} consumers milein, add karne ke liye taiyar hain
+                      {bulkSkipped > 0  ? ` (${bulkSkipped} rows skip ho gayi, incomplete data ki wajah se)` : ''}.
+                    </p>
+                  </div>
+
+                  <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px', marginBottom: '15px' }}>
+                    {bulkRows.map((row, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          fontSize: '12px',
+                          borderBottom: idx !== bulkRows.length - 1 ? '1px solid #f3f4f6' : 'none',
+                        }}
+                      >
+                        <span style={{ color: '#111827' }}>{row.name}</span>
+                        <span style={{ color: '#6b7280' }}>
+                          Ward {row.ward_number} • {row.mobile_number}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={handleBulkConfirm}
+                    disabled={bulkUploading}
+                    style={{
+                      background: '#059669',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      cursor: bulkUploading ? 'not-allowed' : 'pointer',
+                      opacity: bulkUploading ? 0.7 : 1,
+                    }}
+                  >
+                    {bulkUploading ? 'Add Ho Raha Hai...' : `Sabko (${bulkRows.length}) Add Karo`}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {showForm && (
             <form
