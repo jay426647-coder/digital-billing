@@ -212,7 +212,7 @@ export default function BillsPage() {
               display: 'inline-block',
             }}
           >
-            ⚙️ Settings
+             Settings
           </a>
           <button
             onClick={handleLogout}
