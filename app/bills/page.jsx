@@ -11,9 +11,21 @@ function getCurrentMonthYear() {
   return { month, financial_year, label: now.toLocaleString('en-IN', { month: 'long', year: 'numeric' }) };
 }
 
+function buildUpiUri(upiId, payeeName, amount, note) {
+  const params = new URLSearchParams({
+    pa: upiId,
+    pn: payeeName,
+    am: String(amount),
+    tn: note,
+    cu: 'INR',
+  });
+  return `upi://pay?${params.toString()}`;
+}
+
 export default function BillsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [panchayatId, setPanchayatId] = useState(null);
+  const [panchayat, setPanchayat] = useState(null);
   const [bills, setBills] = useState([]);
   const [consumers, setConsumers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +33,7 @@ export default function BillsPage() {
   const [amount, setAmount] = useState('100');
   const [generating, setGenerating] = useState(false);
   const [filter, setFilter] = useState('ALL');
+  const [qrBillId, setQrBillId] = useState(null);
 
   const { month, financial_year, label } = getCurrentMonthYear();
 
@@ -59,6 +72,12 @@ export default function BillsPage() {
     setLoading(true);
     setError('');
 
+    const { data: panchayatData, error: panchayatError } = await supabase
+      .from('panchayats')
+      .select('*')
+      .eq('id', panchayatId)
+      .single();
+
     const { data: billsData, error: billsError } = await supabase
       .from('bills')
       .select('*, consumers(name, consumer_id_str, ward_number)')
@@ -68,9 +87,11 @@ export default function BillsPage() {
       .from('consumers')
       .select('*');
 
+    if (panchayatError) setError(panchayatError.message);
     if (billsError) setError(billsError.message);
     if (consumersError) setError(consumersError.message);
 
+    setPanchayat(panchayatData || null);
     setBills(billsData || []);
     setConsumers(consumersData || []);
     setLoading(false);
@@ -135,6 +156,7 @@ export default function BillsPage() {
     if (error) {
       setError(error.message);
     } else {
+      setQrBillId(null);
       fetchData();
     }
   }
@@ -150,6 +172,10 @@ export default function BillsPage() {
     } else {
       fetchData();
     }
+  }
+
+  function toggleQr(billId) {
+    setQrBillId(qrBillId === billId ? null : billId);
   }
 
   const filteredBills = bills.filter((b) => filter === 'ALL' || b.status === filter);
@@ -172,12 +198,29 @@ export default function BillsPage() {
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
         <h2 style={{ color: '#333', margin: 0 }}>🧾 Bills / Billing</h2>
-        <button
-          onClick={handleLogout}
-          style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-        >
-          Logout
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          
+            href="/settings"
+            style={{
+              background: '#e5e7eb',
+              color: '#374151',
+              border: 'none',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              textDecoration: 'none',
+              display: 'inline-block',
+            }}
+          >
+            ⚙️ Settings
+          </a>
+          <button
+            onClick={handleLogout}
+            style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -248,6 +291,15 @@ export default function BillsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredBills.map((b) => {
                 const colors = statusColors[b.status] || statusColors.PENDING;
+                const note = `${b.consumers?.consumer_id_str || ''} M${b.month} ${b.financial_year}`;
+                const upiUri =
+                  panchayat && panchayat.upi_id
+                    ? buildUpiUri(panchayat.upi_id, panchayat.name || 'Panchayat', b.amount, note)
+                    : null;
+                const qrSrc = upiUri
+                  ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`
+                  : null;
+
                 return (
                   <div
                     key={b.id}
@@ -280,7 +332,7 @@ export default function BillsPage() {
                     </div>
 
                     {b.status !== 'PAID' && (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => markPaid(b.id)}
                           style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
@@ -294,6 +346,33 @@ export default function BillsPage() {
                           >
                             Mark Overdue
                           </button>
+                        )}
+                        <button
+                          onClick={() => toggleQr(b.id)}
+                          style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          {qrBillId === b.id ? 'QR Chhupao' : '📱 QR Dikhao'}
+                        </button>
+                      </div>
+                    )}
+
+                    {qrBillId === b.id && (
+                      <div style={{ marginTop: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '12px', textAlign: 'center' }}>
+                        {qrSrc ? (
+                          <>
+                            <img src={qrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
+                            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                              Consumer isko scan karke ₹{b.amount} pay kar sakta hai. Payment aane ke baad bank/UPI app me check karke "Mark Paid" dabayein.
+                            </p>
+                          </>
+                        ) : (
+                          <p style={{ fontSize: '13px', color: '#9f1239' }}>
+                            Pehle{' '}
+                            <a href="/settings" style={{ color: '#1e40af' }}>
+                              Settings
+                            </a>{' '}
+                            me apni panchayat ki UPI ID daalo, tabhi QR banega.
+                          </p>
                         )}
                       </div>
                     )}
