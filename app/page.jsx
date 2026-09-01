@@ -95,6 +95,11 @@ export default function DigitalBillingDashboard() {
           </div>
         </div>
       )}
+            <a href="/niyam" style={{ textDecoration: 'none', display: 'block', marginTop: '20px' }}>
+        <div style={{ background: '#b91c1c', color: '#fff', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold' }}>
+          ⚠️ नियम और चेतावनी पढ़ें
+        </div>
+      </a>
     </div>
   );
 }
