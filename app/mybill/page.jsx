@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-
-const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+import { formatBillPeriod, getMonthsOverdue, getCurrentCycle } from '../../lib/billUtils';
 
 export default function MyBillPage() {
   const [query, setQuery] = useState('');
@@ -12,6 +11,8 @@ export default function MyBillPage() {
   const [consumer, setConsumer] = useState(null);
   const [bills, setBills] = useState([]);
   const [searched, setSearched] = useState(false);
+
+  const { month: currentMonth, financial_year: currentFinancialYear } = getCurrentCycle();
 
   const statusColors = {
     PAID: { bg: '#ecfdf5', text: '#065f46' },
@@ -151,6 +152,7 @@ export default function MyBillPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {bills.map((b) => {
                 const colors = statusColors[b.status] || statusColors.PENDING;
+                const monthsOverdue = getMonthsOverdue(b, currentMonth, currentFinancialYear);
                 return (
                   <div
                     key={b.id}
@@ -158,11 +160,16 @@ export default function MyBillPage() {
                   >
                     <div>
                       <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>
-                        {monthNames[b.month]} {b.financial_year}
+                        {formatBillPeriod(b)}
                       </p>
                       <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
                         ₹ {b.amount}
                       </p>
+                      {b.status === 'OVERDUE' && monthsOverdue > 0 && (
+                        <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
+                          ⏰ {monthsOverdue} mahine se overdue
+                        </p>
+                      )}
                     </div>
                     <span
                       style={{
