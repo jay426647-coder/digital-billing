@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { formatBillPeriod, getMonthsOverdue, getAbsoluteMonthIndex } from '../../lib/billUtils';
 
 function getCurrentMonthYear() {
   const now = new Date();
@@ -34,6 +35,12 @@ export default function BillsPage() {
   const [generating, setGenerating] = useState(false);
   const [filter, setFilter] = useState('ALL');
   const [qrBillId, setQrBillId] = useState(null);
+
+  const [payConsumerId, setPayConsumerId] = useState('');
+  const [payAmount, setPayAmount] = useState('');
+  const [allocating, setAllocating] = useState(false);
+  const [payMsg, setPayMsg] = useState('');
+  const [showPayQr, setShowPayQr] = useState(false);
 
   const { month, financial_year, label } = getCurrentMonthYear();
 
@@ -103,6 +110,25 @@ export default function BillsPage() {
     }
   }, [checkingAuth, panchayatId]);
 
+  async function markOldPendingAsOverdue() {
+    const { data: pendingBills } = await supabase
+      .from('bills')
+      .select('id, month, financial_year')
+      .eq('panchayat_id', panchayatId)
+      .eq('status', 'PENDING');
+
+    const overdueIds = (pendingBills || [])
+      .filter((b) => !(b.month === month && b.financial_year === financial_year))
+      .map((b) => b.id);
+
+    if (overdueIds.length > 0) {
+      await supabase
+        .from('bills')
+        .update({ status: 'OVERDUE', updated_at: new Date().toISOString() })
+        .in('id', overdueIds);
+    }
+  }
+
   async function handleGenerateBills() {
     setError('');
     if (!amount || isNaN(parseFloat(amount))) {
@@ -131,19 +157,22 @@ export default function BillsPage() {
         payment_mode: 'NONE',
       }));
 
+    if (newBills.length > 0) {
+      const { error: insertError } = await supabase.from('bills').insert(newBills);
+      if (insertError) {
+        setError(insertError.message);
+        setGenerating(false);
+        return;
+      }
+    }
+
+    await markOldPendingAsOverdue();
+
     if (newBills.length === 0) {
-      setError(`Is mahine (${label}) ke bills pehle se ban chuke hain sabhi consumers ke liye.`);
-      setGenerating(false);
-      return;
+      setError(`Is mahine (${label}) ke bills pehle se ban chuke hain sabhi consumers ke liye. Purane bakaya bills check kar liye gaye hain.`);
     }
 
-    const { error: insertError } = await supabase.from('bills').insert(newBills);
-
-    if (insertError) {
-      setError(insertError.message);
-    } else {
-      fetchData();
-    }
+    fetchData();
     setGenerating(false);
   }
 
@@ -178,6 +207,57 @@ export default function BillsPage() {
     setQrBillId(qrBillId === billId ? null : billId);
   }
 
+  async function handleAutoAllocate() {
+    setPayMsg('');
+    setError('');
+
+    if (!payConsumerId) {
+      setPayMsg('Pehle consumer chuno.');
+      return;
+    }
+    const amountReceived = parseFloat(payAmount);
+    if (!amountReceived || amountReceived <= 0) {
+      setPayMsg('Sahi amount daalo.');
+      return;
+    }
+
+    setAllocating(true);
+
+    const consumerBills = bills
+      .filter((b) => b.consumer_id === payConsumerId && b.status !== 'PAID')
+      .sort((a, b) => getAbsoluteMonthIndex(a.financial_year, a.month) - getAbsoluteMonthIndex(b.financial_year, b.month));
+
+    let remaining = amountReceived;
+
+    for (const bill of consumerBills) {
+      if (remaining <= 0) break;
+      const billAmount = Number(bill.amount);
+      if (remaining >= billAmount) {
+        await supabase
+          .from('bills')
+          .update({ status: 'PAID', payment_mode: 'CASH', updated_at: new Date().toISOString() })
+          .eq('id', bill.id);
+        remaining -= billAmount;
+      } else {
+        await supabase
+          .from('bills')
+          .update({ amount: billAmount - remaining, updated_at: new Date().toISOString() })
+          .eq('id', bill.id);
+        remaining = 0;
+      }
+    }
+
+    setPayMsg(
+      remaining > 0
+        ? `Payment jama ho gaya. ₹${remaining.toLocaleString('en-IN')} extra bacha (koi aur bakaya bill nahi tha).`
+        : 'Payment sabhi purane bakaya bills me sahi se jama kar diya gaya (sabse purane mahine se pehle).'
+    );
+    setPayAmount('');
+    setShowPayQr(false);
+    setAllocating(false);
+    fetchData();
+  }
+
   const filteredBills = bills.filter((b) => filter === 'ALL' || b.status === filter);
 
   const statusColors = {
@@ -185,6 +265,29 @@ export default function BillsPage() {
     PENDING: { bg: '#fffbeb', text: '#92400e' },
     OVERDUE: { bg: '#fff1f2', text: '#9f1239' },
   };
+
+  const unpaidByConsumer = {};
+  bills.forEach((b) => {
+    if (b.status !== 'PAID') {
+      if (!unpaidByConsumer[b.consumer_id]) unpaidByConsumer[b.consumer_id] = [];
+      unpaidByConsumer[b.consumer_id].push(b);
+    }
+  });
+
+  const consumersWithDues = consumers.filter((c) => (unpaidByConsumer[c.id] || []).length > 0);
+
+  const selectedConsumerBills = payConsumerId ? (unpaidByConsumer[payConsumerId] || []) : [];
+  const selectedConsumerTotalDue = selectedConsumerBills.reduce((sum, b) => sum + Number(b.amount), 0);
+  const selectedConsumer = consumers.find((c) => c.id === payConsumerId);
+
+  const payNote = selectedConsumer ? `${selectedConsumer.consumer_id_str || ''} Total Due` : '';
+  const payUpiUri =
+    panchayat && panchayat.upi_id && selectedConsumer
+      ? buildUpiUri(panchayat.upi_id, panchayat.name || 'Panchayat', selectedConsumerTotalDue, payNote)
+      : null;
+  const payQrSrc = payUpiUri
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payUpiUri)}`
+    : null;
 
   if (checkingAuth) {
     return (
@@ -200,7 +303,6 @@ export default function BillsPage() {
         <h2 style={{ color: '#333', margin: 0 }}>🧾 Bills / Billing</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
           
-            <a
             href="/settings"
             style={{
               background: '#e5e7eb',
@@ -213,7 +315,7 @@ export default function BillsPage() {
               display: 'inline-block',
             }}
           >
-             Settings
+            Settings
           </a>
           <button
             onClick={handleLogout}
@@ -264,6 +366,116 @@ export default function BillsPage() {
             </button>
           </div>
 
+          <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#111827' }}>💰 Payment Jama Karo</h3>
+            <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#6b7280' }}>
+              Consumer chuno, jitna paisa mila utna daalo — sabse purane bakaya mahine se automatically jama ho jayega.
+            </p>
+
+            {consumersWithDues.length === 0 ? (
+              <p style={{ fontSize: '13px', color: '#6b7280' }}>Abhi koi bakaya bill nahi hai.</p>
+            ) : (
+              <>
+                <select
+                  value={payConsumerId}
+                  onChange={(e) => {
+                    setPayConsumerId(e.target.value);
+                    setShowPayQr(false);
+                    setPayMsg('');
+                  }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '10px', fontSize: '14px' }}
+                >
+                  <option value="">-- Consumer Chuno --</option>
+                  {consumersWithDues.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.consumer_id_str}) - Ward {c.ward_number}
+                    </option>
+                  ))}
+                </select>
+
+                {payConsumerId && (
+                  <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '10px', marginBottom: '10px' }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#9f1239' }}>Total Bakaya ({selectedConsumerBills.length} mahine)</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#881337' }}>
+                      ₹ {selectedConsumerTotalDue.toLocaleString('en-IN')}
+                    </p>
+                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {selectedConsumerBills.map((b) => (
+                        <p key={b.id} style={{ margin: 0, fontSize: '12px', color: '#9f1239' }}>
+                          • {formatBillPeriod(b)} — ₹{b.amount}
+                          {getMonthsOverdue(b, month, financial_year) > 0
+                            ? ` (${getMonthsOverdue(b, month, financial_year)} mahine se overdue)`
+                            : ''}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {payConsumerId && (
+                  <>
+                    <input
+                      type="number"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      placeholder="Kitna paisa mila? (₹)"
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '10px', fontSize: '14px' }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleAutoAllocate}
+                        disabled={allocating}
+                        style={{
+                          flex: 1,
+                          background: allocating ? '#9ca3af' : '#059669',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '10px 16px',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          cursor: allocating ? 'default' : 'pointer',
+                        }}
+                      >
+                        {allocating ? 'Jama ho raha hai...' : '✅ Jama Karo (Auto)'}
+                      </button>
+                      <button
+                        onClick={() => setShowPayQr(!showPayQr)}
+                        style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
+                      >
+                        📱 QR
+                      </button>
+                    </div>
+
+                    {showPayQr && (
+                      <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                        {payQrSrc ? (
+                          <>
+                            <img src={payQrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
+                            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                              Total ₹{selectedConsumerTotalDue} ke liye QR. Payment aane ke baad amount daal kar "Jama Karo" dabayein.
+                            </p>
+                          </>
+                        ) : (
+                          <p style={{ fontSize: '13px', color: '#9f1239' }}>
+                            Pehle{' '}
+                            <a href="/settings" style={{ color: '#1e40af' }}>
+                              Settings
+                            </a>{' '}
+                            me apni panchayat ki UPI ID daalo, tabhi QR banega.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {payMsg && (
+                      <p style={{ fontSize: '12px', color: '#065f46', marginTop: '10px' }}>{payMsg}</p>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
             {['ALL', 'PENDING', 'PAID', 'OVERDUE'].map((f) => (
               <button
@@ -300,6 +512,7 @@ export default function BillsPage() {
                 const qrSrc = upiUri
                   ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`
                   : null;
+                const monthsOverdue = getMonthsOverdue(b, month, financial_year);
 
                 return (
                   <div
@@ -312,11 +525,16 @@ export default function BillsPage() {
                           {b.consumers?.name || 'Unknown'}
                         </p>
                         <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                          ID: {b.consumers?.consumer_id_str} • Ward {b.consumers?.ward_number} • {b.financial_year}, Month {b.month}
+                          ID: {b.consumers?.consumer_id_str} • Ward {b.consumers?.ward_number} • {formatBillPeriod(b)}
                         </p>
                         <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
                           ₹ {b.amount}
                         </p>
+                        {b.status === 'OVERDUE' && monthsOverdue > 0 && (
+                          <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
+                            ⏰ {monthsOverdue} mahine se overdue
+                          </p>
+                        )}
                       </div>
                       <span
                         style={{
