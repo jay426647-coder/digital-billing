@@ -12,7 +12,7 @@ export async function GET(request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-    const supabase = createClient(
+  const supabase = createClient(
     'https://yifeyrosuuhwubrgzdaz.supabase.co',
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
@@ -57,5 +57,23 @@ export async function GET(request) {
     }
   }
 
-  return Response.json({ success: true, created, month, financialYear });
+  const { data: pendingBills } = await supabase
+    .from('bills')
+    .select('id, month, financial_year')
+    .eq('status', 'PENDING');
+
+  const overdueIds = (pendingBills || [])
+    .filter((b) => !(b.month === month && b.financial_year === financialYear))
+    .map((b) => b.id);
+
+  let markedOverdue = 0;
+  if (overdueIds.length > 0) {
+    const { error: overdueError } = await supabase
+      .from('bills')
+      .update({ status: 'OVERDUE', updated_at: new Date().toISOString() })
+      .in('id', overdueIds);
+    if (!overdueError) markedOverdue = overdueIds.length;
+  }
+
+  return Response.json({ success: true, created, markedOverdue, month, financialYear });
 }
