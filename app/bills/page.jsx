@@ -302,7 +302,7 @@ export default function BillsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
         <h2 style={{ color: '#333', margin: 0 }}>🧾 Bills / Billing</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          
+          <a
             href="/settings"
             style={{
               background: '#e5e7eb',
