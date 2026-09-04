@@ -29,7 +29,7 @@ export default function LangToggle() {
         cursor: 'pointer',
       }}
     >
-      🌐 {lang === 'hi' ? 'English' : 'हिंदी'}
+      🌐 {lang === 'hi' ? 'हिंदी' : 'English'}
     </button>
   );
 }
