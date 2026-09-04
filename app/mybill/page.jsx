@@ -1,16 +1,63 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatBillPeriod, getMonthsOverdue, getCurrentCycle } from '../../lib/billUtils';
+import { getLang } from '../../lib/i18n';
+
+const text = {
+  hi: {
+    title: '🔍 Apna Bill Dekhein',
+    subtitle: 'Consumer ID ya Mobile Number daal kar apna billing status dekhein.',
+    inputLabel: 'Consumer ID ya Mobile Number',
+    placeholder: 'Jaise: C001 ya 9876543210',
+    searching: 'Dhundh rahe hain...',
+    searchBtn: '🔍 Search Karo',
+    emptyInput: 'Consumer ID ya Mobile Number daalein.',
+    noRecord: 'Koi record nahi mila. Consumer ID ya Mobile Number check karein.',
+    idLabel: 'ID',
+    ward: 'Ward',
+    totalDue: 'Total Bakaya (Due)',
+    noDue: 'Koi Bakaya Nahi',
+    billHistory: 'Bill History',
+    noBills: 'Abhi tak koi bill generate nahi hua hai.',
+    overdueSuffix: 'mahine se overdue',
+    noRecordFound: 'Koi record nahi mila.',
+  },
+  en: {
+    title: '🔍 View My Bill',
+    subtitle: 'Enter Consumer ID or Mobile Number to check your billing status.',
+    inputLabel: 'Consumer ID or Mobile Number',
+    placeholder: 'e.g. C001 or 9876543210',
+    searching: 'Searching...',
+    searchBtn: '🔍 Search',
+    emptyInput: 'Please enter Consumer ID or Mobile Number.',
+    noRecord: 'No record found. Please check Consumer ID or Mobile Number.',
+    idLabel: 'ID',
+    ward: 'Ward',
+    totalDue: 'Total Due',
+    noDue: 'No Dues',
+    billHistory: 'Bill History',
+    noBills: 'No bills generated yet.',
+    overdueSuffix: 'months overdue',
+    noRecordFound: 'No record found.',
+  },
+};
 
 export default function MyBillPage() {
+  const [lang, setLang] = useState('hi');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [consumer, setConsumer] = useState(null);
   const [bills, setBills] = useState([]);
   const [searched, setSearched] = useState(false);
+
+  useEffect(() => {
+    setLang(getLang());
+  }, []);
+
+  const t = text[lang];
 
   const { month: currentMonth, financial_year: currentFinancialYear } = getCurrentCycle();
 
@@ -27,7 +74,7 @@ export default function MyBillPage() {
 
     const trimmed = query.trim();
     if (!trimmed) {
-      setError('Consumer ID ya Mobile Number daalein.');
+      setError(t.emptyInput);
       setConsumer(null);
       setBills([]);
       return;
@@ -51,7 +98,7 @@ export default function MyBillPage() {
     if (!consumerData) {
       setConsumer(null);
       setBills([]);
-      setError('Koi record nahi mila. Consumer ID ya Mobile Number check karein.');
+      setError(t.noRecord);
       setLoading(false);
       return;
     }
@@ -78,20 +125,20 @@ export default function MyBillPage() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <h2 style={{ color: '#333', marginBottom: '5px' }}>🔍 Apna Bill Dekhein</h2>
+      <h2 style={{ color: '#333', marginBottom: '5px' }}>{t.title}</h2>
       <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
-        Consumer ID ya Mobile Number daal kar apna billing status dekhein.
+        {t.subtitle}
       </p>
 
       <form onSubmit={handleSearch} style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
         <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
-          Consumer ID ya Mobile Number
+          {t.inputLabel}
         </label>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Jaise: C001 ya 9876543210"
+          placeholder={t.placeholder}
           style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '12px', fontSize: '15px' }}
         />
         <button
@@ -108,7 +155,7 @@ export default function MyBillPage() {
             width: '100%',
           }}
         >
-          {loading ? 'Dhundh rahe hain...' : '🔍 Search Karo'}
+          {loading ? t.searching : t.searchBtn}
         </button>
       </form>
 
@@ -123,7 +170,7 @@ export default function MyBillPage() {
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
             <p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px', color: '#1e3a8a' }}>{consumer.name}</p>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#1e40af' }}>
-              ID: {consumer.consumer_id_str} • Ward {consumer.ward_number} • {consumer.mobile_number}
+              {t.idLabel}: {consumer.consumer_id_str} • {t.ward} {consumer.ward_number} • {consumer.mobile_number}
             </p>
           </div>
 
@@ -137,17 +184,17 @@ export default function MyBillPage() {
             }}
           >
             <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', color: totalDue > 0 ? '#9f1239' : '#065f46' }}>
-              {totalDue > 0 ? 'Total Bakaya (Due)' : 'Koi Bakaya Nahi'}
+              {totalDue > 0 ? t.totalDue : t.noDue}
             </h3>
             <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: totalDue > 0 ? '#881337' : '#064e3b' }}>
               ₹ {totalDue.toLocaleString('en-IN')}
             </p>
           </div>
 
-          <h3 style={{ fontSize: '15px', color: '#374151', marginBottom: '10px' }}>Bill History</h3>
+          <h3 style={{ fontSize: '15px', color: '#374151', marginBottom: '10px' }}>{t.billHistory}</h3>
 
           {bills.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>Abhi tak koi bill generate nahi hua hai.</p>
+            <p style={{ color: '#6b7280' }}>{t.noBills}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {bills.map((b) => {
@@ -167,7 +214,7 @@ export default function MyBillPage() {
                       </p>
                       {b.status === 'OVERDUE' && monthsOverdue > 0 && (
                         <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
-                          ⏰ {monthsOverdue} mahine se overdue
+                          ⏰ {monthsOverdue} {t.overdueSuffix}
                         </p>
                       )}
                     </div>
@@ -192,7 +239,7 @@ export default function MyBillPage() {
       )}
 
       {searched && !consumer && !loading && !error && (
-        <p style={{ color: '#6b7280' }}>Koi record nahi mila.</p>
+        <p style={{ color: '#6b7280' }}>{t.noRecordFound}</p>
       )}
     </div>
   );
