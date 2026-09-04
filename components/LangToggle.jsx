@@ -17,22 +17,19 @@ export default function LangToggle() {
   }
 
   return (
-    <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 1000 }}>
-      <button
-        onClick={handleToggle}
-        style={{
-          background: '#111827',
-          color: '#fff',
-          border: 'none',
-          padding: '6px 12px',
-          borderRadius: '20px',
-          fontSize: '12px',
-          cursor: 'pointer',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-        }}
-      >
-        🌐 {lang === 'hi' ? 'English' : 'हिंदी'}
-      </button>
-    </div>
+    <button
+      onClick={handleToggle}
+      style={{
+        background: '#111827',
+        color: '#fff',
+        border: 'none',
+        padding: '5px 10px',
+        borderRadius: '20px',
+        fontSize: '11px',
+        cursor: 'pointer',
+      }}
+    >
+      🌐 {lang === 'hi' ? 'English' : 'हिंदी'}
+    </button>
   );
 }
