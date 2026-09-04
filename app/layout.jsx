@@ -1,5 +1,3 @@
-import LangToggle from '../components/LangToggle';
-
 export const metadata = {
   title: 'Digital Billing - Panchayat Dashboard',
   description: 'Panchayat digital billing management dashboard',
@@ -8,10 +6,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-        <LangToggle />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
