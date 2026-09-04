@@ -3,6 +3,86 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatBillPeriod, getMonthsOverdue, getAbsoluteMonthIndex } from '../../lib/billUtils';
+import { getLang } from '../../lib/i18n';
+
+const text = {
+  hi: {
+    pageTitle: '🧾 बिल / बिलिंग',
+    settings: 'सेटिंग्स',
+    logout: 'लॉगआउट',
+    currentCycle: 'वर्तमान चक्र',
+    amountLabel: 'प्रति उपभोक्ता राशि (₹)',
+    generating: 'जनरेट हो रहा है...',
+    generateBtn: (label) => `⚡ सभी उपभोक्ताओं के लिए ${label} का बिल जनरेट करो`,
+    paymentBoxTitle: '💰 भुगतान जमा करो',
+    paymentBoxSub: 'उपभोक्ता चुनो, जितना पैसा मिला उतना डालो — सबसे पुराने बकाया महीने से automatically जमा हो जाएगा।',
+    noDues: 'अभी कोई बकाया बिल नहीं है।',
+    selectConsumer: '-- उपभोक्ता चुनो --',
+    ward: 'वार्ड',
+    totalDueLabel: 'कुल बकाया',
+    monthsWord: 'महीने',
+    overdueSuffix: 'महीने से overdue',
+    amountReceivedPlaceholder: 'कितना पैसा मिला? (₹)',
+    depositing: 'जमा हो रहा है...',
+    depositBtn: '✅ जमा करो (Auto)',
+    qrBtn: '📱 QR',
+    qrNote: (amt) => `कुल ₹${amt} के लिए QR। भुगतान आने के बाद amount डालकर "जमा करो" दबाएं।`,
+    settingsFirst: 'पहले',
+    settingsFirstEnd: 'में अपनी पंचायत की UPI ID डालो, तभी QR बनेगा।',
+    filterAll: 'सभी',
+    filterPending: 'बकाया',
+    filterPaid: 'भुगतान हुआ',
+    filterOverdue: 'Overdue',
+    loading: 'लोड हो रहा है...',
+    noBillFound: 'कोई बिल नहीं मिला।',
+    unknown: 'अज्ञात',
+    markPaid: 'भुगतान हुआ (नकद)',
+    markOverdue: 'Overdue करें',
+    qrShow: '📱 QR दिखाओ',
+    qrHide: 'QR छुपाओ',
+    qrConsumerNote: (amt) => `उपभोक्ता इसे scan करके ₹${amt} pay कर सकता है। भुगतान आने के बाद bank/UPI app में check करके "भुगतान हुआ" दबाएं।`,
+    genericAmount: 'सही राशि डालो।',
+    chooseConsumerFirst: 'पहले उपभोक्ता चुनो।',
+  },
+  en: {
+    pageTitle: '🧾 Bills / Billing',
+    settings: 'Settings',
+    logout: 'Logout',
+    currentCycle: 'Current cycle',
+    amountLabel: 'Amount per Consumer (₹)',
+    generating: 'Generating...',
+    generateBtn: (label) => `⚡ Generate ${label} Bill for All Consumers`,
+    paymentBoxTitle: '💰 Record Payment',
+    paymentBoxSub: 'Select a consumer, enter the amount received — it will auto-apply to the oldest unpaid month first.',
+    noDues: 'No dues pending right now.',
+    selectConsumer: '-- Select Consumer --',
+    ward: 'Ward',
+    totalDueLabel: 'Total Due',
+    monthsWord: 'months',
+    overdueSuffix: 'months overdue',
+    amountReceivedPlaceholder: 'Amount received? (₹)',
+    depositing: 'Depositing...',
+    depositBtn: '✅ Deposit (Auto)',
+    qrBtn: '📱 QR',
+    qrNote: (amt) => `QR for total ₹${amt}. After payment arrives, enter the amount and press "Deposit".`,
+    settingsFirst: 'First add your panchayat\'s UPI ID in',
+    settingsFirstEnd: ', only then a QR will generate.',
+    filterAll: 'All',
+    filterPending: 'Pending',
+    filterPaid: 'Paid',
+    filterOverdue: 'Overdue',
+    loading: 'Loading...',
+    noBillFound: 'No bills found.',
+    unknown: 'Unknown',
+    markPaid: 'Mark Paid (Cash)',
+    markOverdue: 'Mark Overdue',
+    qrShow: '📱 Show QR',
+    qrHide: 'Hide QR',
+    qrConsumerNote: (amt) => `Consumer can scan this to pay ₹${amt}. After the payment arrives, check your bank/UPI app then press "Mark Paid".`,
+    genericAmount: 'Please enter a valid amount.',
+    chooseConsumerFirst: 'Please select a consumer first.',
+  },
+};
 
 function getCurrentMonthYear() {
   const now = new Date();
@@ -24,6 +104,7 @@ function buildUpiUri(upiId, payeeName, amount, note) {
 }
 
 export default function BillsPage() {
+  const [lang, setLang] = useState('hi');
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [panchayatId, setPanchayatId] = useState(null);
   const [panchayat, setPanchayat] = useState(null);
@@ -41,6 +122,12 @@ export default function BillsPage() {
   const [allocating, setAllocating] = useState(false);
   const [payMsg, setPayMsg] = useState('');
   const [showPayQr, setShowPayQr] = useState(false);
+
+  useEffect(() => {
+    setLang(getLang());
+  }, []);
+
+  const t = text[lang];
 
   const { month, financial_year, label } = getCurrentMonthYear();
 
@@ -132,7 +219,7 @@ export default function BillsPage() {
   async function handleGenerateBills() {
     setError('');
     if (!amount || isNaN(parseFloat(amount))) {
-      setError('Sahi amount daalo.');
+      setError(t.genericAmount);
       return;
     }
     setGenerating(true);
@@ -212,12 +299,12 @@ export default function BillsPage() {
     setError('');
 
     if (!payConsumerId) {
-      setPayMsg('Pehle consumer chuno.');
+      setPayMsg(t.chooseConsumerFirst);
       return;
     }
     const amountReceived = parseFloat(payAmount);
     if (!amountReceived || amountReceived <= 0) {
-      setPayMsg('Sahi amount daalo.');
+      setPayMsg(t.genericAmount);
       return;
     }
 
@@ -292,7 +379,7 @@ export default function BillsPage() {
   if (checkingAuth) {
     return (
       <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-        <p>Loading...</p>
+        <p>{t.loading}</p>
       </div>
     );
   }
@@ -300,9 +387,9 @@ export default function BillsPage() {
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-        <h2 style={{ color: '#333', margin: 0 }}>🧾 Bills / Billing</h2>
+        <h2 style={{ color: '#333', margin: 0 }}>{t.pageTitle}</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <a
+          
             href="/settings"
             style={{
               background: '#e5e7eb',
@@ -315,13 +402,13 @@ export default function BillsPage() {
               display: 'inline-block',
             }}
           >
-            Settings
+            {t.settings}
           </a>
           <button
             onClick={handleLogout}
             style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
           >
-            Logout
+            {t.logout}
           </button>
         </div>
       </div>
@@ -335,12 +422,12 @@ export default function BillsPage() {
       {!panchayatId ? null : (
         <>
           <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
-            Current cycle: {label}
+            {t.currentCycle}: {label}
           </p>
 
           <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
             <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
-              Amount per Consumer (₹)
+              {t.amountLabel}
             </label>
             <input
               type="number"
@@ -362,18 +449,18 @@ export default function BillsPage() {
                 width: '100%',
               }}
             >
-              {generating ? 'Generate ho raha hai...' : `⚡ Sabhi Consumers ke liye ${label} ka Bill Generate Karo`}
+              {generating ? t.generating : t.generateBtn(label)}
             </button>
           </div>
 
           <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#111827' }}>💰 Payment Jama Karo</h3>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#111827' }}>{t.paymentBoxTitle}</h3>
             <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#6b7280' }}>
-              Consumer chuno, jitna paisa mila utna daalo — sabse purane bakaya mahine se automatically jama ho jayega.
+              {t.paymentBoxSub}
             </p>
 
             {consumersWithDues.length === 0 ? (
-              <p style={{ fontSize: '13px', color: '#6b7280' }}>Abhi koi bakaya bill nahi hai.</p>
+              <p style={{ fontSize: '13px', color: '#6b7280' }}>{t.noDues}</p>
             ) : (
               <>
                 <select
@@ -385,17 +472,17 @@ export default function BillsPage() {
                   }}
                   style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '10px', fontSize: '14px' }}
                 >
-                  <option value="">-- Consumer Chuno --</option>
+                  <option value="">{t.selectConsumer}</option>
                   {consumersWithDues.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} ({c.consumer_id_str}) - Ward {c.ward_number}
+                      {c.name} ({c.consumer_id_str}) - {t.ward} {c.ward_number}
                     </option>
                   ))}
                 </select>
 
                 {payConsumerId && (
                   <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '10px', marginBottom: '10px' }}>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#9f1239' }}>Total Bakaya ({selectedConsumerBills.length} mahine)</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#9f1239' }}>{t.totalDueLabel} ({selectedConsumerBills.length} {t.monthsWord})</p>
                     <p style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#881337' }}>
                       ₹ {selectedConsumerTotalDue.toLocaleString('en-IN')}
                     </p>
@@ -404,7 +491,7 @@ export default function BillsPage() {
                         <p key={b.id} style={{ margin: 0, fontSize: '12px', color: '#9f1239' }}>
                           • {formatBillPeriod(b)} — ₹{b.amount}
                           {getMonthsOverdue(b, month, financial_year) > 0
-                            ? ` (${getMonthsOverdue(b, month, financial_year)} mahine se overdue)`
+                            ? ` (${getMonthsOverdue(b, month, financial_year)} ${t.overdueSuffix})`
                             : ''}
                         </p>
                       ))}
@@ -418,7 +505,7 @@ export default function BillsPage() {
                       type="number"
                       value={payAmount}
                       onChange={(e) => setPayAmount(e.target.value)}
-                      placeholder="Kitna paisa mila? (₹)"
+                      placeholder={t.amountReceivedPlaceholder}
                       style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '10px', fontSize: '14px' }}
                     />
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -436,13 +523,13 @@ export default function BillsPage() {
                           cursor: allocating ? 'default' : 'pointer',
                         }}
                       >
-                        {allocating ? 'Jama ho raha hai...' : '✅ Jama Karo (Auto)'}
+                        {allocating ? t.depositing : t.depositBtn}
                       </button>
                       <button
                         onClick={() => setShowPayQr(!showPayQr)}
                         style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
                       >
-                        📱 QR
+                        {t.qrBtn}
                       </button>
                     </div>
 
@@ -452,16 +539,16 @@ export default function BillsPage() {
                           <>
                             <img src={payQrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
                             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
-                              Total ₹{selectedConsumerTotalDue} ke liye QR. Payment aane ke baad amount daal kar "Jama Karo" dabayein.
+                              {t.qrNote(selectedConsumerTotalDue)}
                             </p>
                           </>
                         ) : (
                           <p style={{ fontSize: '13px', color: '#9f1239' }}>
-                            Pehle{' '}
+                            {t.settingsFirst}{' '}
                             <a href="/settings" style={{ color: '#1e40af' }}>
-                              Settings
-                            </a>{' '}
-                            me apni panchayat ki UPI ID daalo, tabhi QR banega.
+                              {t.settings}
+                            </a>
+                            {t.settingsFirstEnd}
                           </p>
                         )}
                       </div>
@@ -477,13 +564,18 @@ export default function BillsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
-            {['ALL', 'PENDING', 'PAID', 'OVERDUE'].map((f) => (
+            {[
+              { key: 'ALL', label: t.filterAll },
+              { key: 'PENDING', label: t.filterPending },
+              { key: 'PAID', label: t.filterPaid },
+              { key: 'OVERDUE', label: t.filterOverdue },
+            ].map((f) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
+                key={f.key}
+                onClick={() => setFilter(f.key)}
                 style={{
-                  background: filter === f ? '#111827' : '#e5e7eb',
-                  color: filter === f ? '#fff' : '#374151',
+                  background: filter === f.key ? '#111827' : '#e5e7eb',
+                  color: filter === f.key ? '#fff' : '#374151',
                   border: 'none',
                   padding: '6px 12px',
                   borderRadius: '20px',
@@ -491,15 +583,15 @@ export default function BillsPage() {
                   cursor: 'pointer',
                 }}
               >
-                {f}
+                {f.label}
               </button>
             ))}
           </div>
 
           {loading ? (
-            <p>Loading...</p>
+            <p>{t.loading}</p>
           ) : filteredBills.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>Koi bill nahi mila.</p>
+            <p style={{ color: '#6b7280' }}>{t.noBillFound}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredBills.map((b) => {
@@ -522,17 +614,17 @@ export default function BillsPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
                         <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>
-                          {b.consumers?.name || 'Unknown'}
+                          {b.consumers?.name || t.unknown}
                         </p>
                         <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                          ID: {b.consumers?.consumer_id_str} • Ward {b.consumers?.ward_number} • {formatBillPeriod(b)}
+                          ID: {b.consumers?.consumer_id_str} • {t.ward} {b.consumers?.ward_number} • {formatBillPeriod(b)}
                         </p>
                         <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
                           ₹ {b.amount}
                         </p>
                         {b.status === 'OVERDUE' && monthsOverdue > 0 && (
                           <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
-                            ⏰ {monthsOverdue} mahine se overdue
+                            ⏰ {monthsOverdue} {t.overdueSuffix}
                           </p>
                         )}
                       </div>
@@ -556,21 +648,21 @@ export default function BillsPage() {
                           onClick={() => markPaid(b.id)}
                           style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                         >
-                          Mark Paid (Cash)
+                          {t.markPaid}
                         </button>
                         {b.status !== 'OVERDUE' && (
                           <button
                             onClick={() => markOverdue(b.id)}
                             style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                           >
-                            Mark Overdue
+                            {t.markOverdue}
                           </button>
                         )}
                         <button
                           onClick={() => toggleQr(b.id)}
                           style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                         >
-                          {qrBillId === b.id ? 'QR Chhupao' : '📱 QR Dikhao'}
+                          {qrBillId === b.id ? t.qrHide : t.qrShow}
                         </button>
                       </div>
                     )}
@@ -581,16 +673,16 @@ export default function BillsPage() {
                           <>
                             <img src={qrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
                             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
-                              Consumer isko scan karke ₹{b.amount} pay kar sakta hai. Payment aane ke baad bank/UPI app me check karke "Mark Paid" dabayein.
+                              {t.qrConsumerNote(b.amount)}
                             </p>
                           </>
                         ) : (
                           <p style={{ fontSize: '13px', color: '#9f1239' }}>
-                            Pehle{' '}
+                            {t.settingsFirst}{' '}
                             <a href="/settings" style={{ color: '#1e40af' }}>
-                              Settings
-                            </a>{' '}
-                            me apni panchayat ki UPI ID daalo, tabhi QR banega.
+                              {t.settings}
+                            </a>
+                            {t.settingsFirstEnd}
                           </p>
                         )}
                       </div>
