@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import LangToggle from '../components/LangToggle';
 
 export default function DigitalBillingDashboard() {
   const [stats, setStats] = useState({
@@ -41,6 +42,10 @@ export default function DigitalBillingDashboard() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+        <LangToggle />
+      </div>
+
       <h2 style={{ color: '#333', marginBottom: '20px' }}>📱 Digital Billing - Panchayat Dashboard</h2>
 
       <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
@@ -95,7 +100,7 @@ export default function DigitalBillingDashboard() {
           </div>
         </div>
       )}
-                <a href="/reports" style={{ textDecoration: 'none', display: 'block', marginTop: '20px' }}>
+      <a href="/reports" style={{ textDecoration: 'none', display: 'block', marginTop: '20px' }}>
         <div style={{ background: '#7c3aed', color: '#fff', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold' }}>
           📊 Mahine Wise Report
         </div>
