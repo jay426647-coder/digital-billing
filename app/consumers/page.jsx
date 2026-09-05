@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import * as XLSX from 'xlsx';
 import { getLang } from '../../lib/i18n';
+import { theme } from '../../lib/theme';
 
 const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -385,23 +386,37 @@ export default function ConsumersPage() {
 
   if (checkingAuth) {
     return (
-      <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
+      <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh' }}>
         <p>{t.loading}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ color: '#333', margin: 0 }}>{t.pageTitle}</h2>
+    <div style={{ fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh', paddingBottom: '20px' }}>
+      <div
+        style={{
+          background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+          padding: '20px',
+          color: '#fff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottomLeftRadius: '20px',
+          borderBottomRightRadius: '20px',
+          marginBottom: '20px',
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: '19px' }}>{t.pageTitle}</h2>
         <button
           onClick={handleLogout}
-          style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+          style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
         >
           {t.logout}
         </button>
       </div>
+
+      <div style={{ padding: '0 20px' }}>
 
       {error && (
         <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px' }}>
@@ -422,11 +437,11 @@ export default function ConsumersPage() {
                 }
               }}
               style={{
-                background: showForm ? '#6b7280' : '#2563eb',
+                background: showForm ? '#6b7280' : theme.accent,
                 color: '#fff',
                 border: 'none',
                 padding: '10px 16px',
-                borderRadius: '8px',
+                borderRadius: theme.radiusSmall,
                 fontSize: '14px',
                 cursor: 'pointer',
               }}
@@ -444,11 +459,11 @@ export default function ConsumersPage() {
                 }
               }}
               style={{
-                background: showBulkUpload ? '#6b7280' : '#059669',
+                background: showBulkUpload ? '#6b7280' : theme.primary,
                 color: '#fff',
                 border: 'none',
                 padding: '10px 16px',
-                borderRadius: '8px',
+                borderRadius: theme.radiusSmall,
                 fontSize: '14px',
                 cursor: 'pointer',
               }}
@@ -458,7 +473,7 @@ export default function ConsumersPage() {
           </div>
 
           {showBulkUpload && (
-            <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+            <div style={{ background: theme.card, padding: '15px', borderRadius: theme.radius, marginBottom: '20px', border: `1px solid ${theme.border}`, boxShadow: theme.shadow }}>
               <p style={{ fontSize: '13px', color: '#374151', marginTop: 0 }}>
                 {t.bulkInfo(t.name, t.wardNumber, t.mobileNumber)}
               </p>
@@ -514,11 +529,11 @@ export default function ConsumersPage() {
                     onClick={handleBulkConfirm}
                     disabled={bulkUploading}
                     style={{
-                      background: '#059669',
+                      background: theme.primary,
                       color: '#fff',
                       border: 'none',
                       padding: '10px 16px',
-                      borderRadius: '8px',
+                      borderRadius: theme.radiusSmall,
                       fontSize: '14px',
                       cursor: bulkUploading ? 'not-allowed' : 'pointer',
                       opacity: bulkUploading ? 0.7 : 1,
@@ -534,7 +549,7 @@ export default function ConsumersPage() {
           {showForm && (
             <form
               onSubmit={handleSubmit}
-              style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}
+              style={{ background: theme.card, padding: '15px', borderRadius: theme.radius, marginBottom: '20px', border: `1px solid ${theme.border}`, boxShadow: theme.shadow }}
             >
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.consumerId}</label>
@@ -578,7 +593,7 @@ export default function ConsumersPage() {
 
               <button
                 type="submit"
-                style={{ background: '#059669', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
+                style={{ background: theme.primary, color: '#fff', border: 'none', padding: '10px 16px', borderRadius: theme.radiusSmall, fontSize: '14px', cursor: 'pointer' }}
               >
                 {editingId ? t.updateBtn : t.saveBtn}
               </button>
@@ -591,38 +606,38 @@ export default function ConsumersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t.searchPlaceholder}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px', background: '#fff' }}
+              style={{ width: '100%', padding: '12px', borderRadius: theme.radius, border: `1px solid ${theme.border}`, boxSizing: 'border-box', fontSize: '14px', background: theme.card, boxShadow: theme.shadow }}
             />
           </div>
 
           {loading ? (
             <p>{t.loading}</p>
           ) : consumers.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>{t.noConsumers}</p>
+            <p style={{ color: theme.textMuted }}>{t.noConsumers}</p>
           ) : filteredConsumers.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>{t.noSearchResult}</p>
+            <p style={{ color: theme.textMuted }}>{t.noSearchResult}</p>
           ) : (
             <>
-              <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '10px' }}>
+              <p style={{ color: theme.textMuted, fontSize: '12px', marginBottom: '10px' }}>
                 {t.found(filteredConsumers.length)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {filteredConsumers.map((c) => (
                   <div
                     key={c.id}
-                    style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}
+                    style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '14px', boxShadow: theme.shadow }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{c.name}</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                        <p style={{ margin: 0, fontWeight: 'bold', color: theme.textDark }}>{c.name}</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: theme.textMuted }}>
                           ID: {c.consumer_id_str} • {t.ward} {c.ward_number} • {c.mobile_number}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => handleEdit(c)}
-                          style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                          style={{ background: theme.accentLight, color: theme.accent, border: 'none', padding: '6px 10px', borderRadius: theme.radiusSmall, fontSize: '12px', cursor: 'pointer' }}
                         >
                           {t.edit}
                         </button>
@@ -686,6 +701,7 @@ export default function ConsumersPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
