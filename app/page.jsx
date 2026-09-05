@@ -4,13 +4,16 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import LangToggle from '../components/LangToggle';
 import { getLang } from '../lib/i18n';
+import { theme } from '../lib/theme';
 
 const text = {
   hi: {
-    title: '📱 डिजिटल बिलिंग - पंचायत डैशबोर्ड',
-    consumers: '👥 उपभोक्ता',
-    bills: '🧾 बिल',
-    myBill: '🔍 अपना बिल देखें',
+    title: 'डिजिटल बिलिंग',
+    subtitle: 'पंचायत डैशबोर्ड',
+    consumers: 'उपभोक्ता',
+    bills: 'बिल',
+    myBill: 'अपना बिल देखें',
+    report: 'रिपोर्ट',
     loading: 'लोड हो रहा है...',
     totalCollected: 'कुल जमा राशि',
     paidBills: 'भुगतान किए गए बिल',
@@ -20,14 +23,15 @@ const text = {
     totalConsumers: 'कुल उपभोक्ता',
     overdueAccounts: 'अतिदेय खाते',
     requiresNotice: 'ध्यान देने की जरूरत',
-    report: '📊 महीने वाइज रिपोर्ट',
     niyam: '⚠️ नियम और चेतावनी पढ़ें',
-  },  
+  },
   en: {
-    title: '📱 Digital Billing - Panchayat Dashboard',
-    consumers: '👥 Consumers',
-    bills: '🧾 Bills',
-    myBill: '🔍 View My Bill',
+    title: 'Digital Billing',
+    subtitle: 'Panchayat Dashboard',
+    consumers: 'Consumers',
+    bills: 'Bills',
+    myBill: 'View My Bill',
+    report: 'Report',
     loading: 'Loading...',
     totalCollected: 'Total Collected',
     paidBills: 'Paid Bills',
@@ -37,7 +41,6 @@ const text = {
     totalConsumers: 'Total Consumers',
     overdueAccounts: 'Overdue Accounts',
     requiresNotice: 'Requires Notice',
-    report: '📊 Monthly Report',
     niyam: '⚠️ Rules & Warning',
   },
 };
@@ -85,76 +88,142 @@ export default function DigitalBillingDashboard() {
     fetchStats();
   }, []);
 
+  const gridItems = [
+    { href: '/consumers', label: t.consumers, icon: '👥', color: theme.accent },
+    { href: '/bills', label: t.bills, icon: '🧾', color: theme.primaryDark },
+    { href: '/mybill', label: t.myBill, icon: '🔍', color: theme.primary },
+    { href: '/reports', label: t.report, icon: '📊', color: '#7c3aed' },
+  ];
+
+  const statCards = [
+    {
+      label: t.totalCollected,
+      value: `₹ ${stats.totalCollected.toLocaleString('en-IN')}`,
+      sub: `${stats.paidCount} ${t.paidBills}`,
+      colors: theme.status.paid,
+    },
+    {
+      label: t.totalPending,
+      value: `₹ ${stats.totalPending.toLocaleString('en-IN')}`,
+      sub: `${stats.unpaidCount} ${t.unpaidBills}`,
+      colors: theme.status.overdue,
+    },
+    {
+      label: t.activeConnections,
+      value: stats.activeConnections,
+      sub: t.totalConsumers,
+      colors: { bg: theme.accentLight, text: theme.accent, border: '#bfdbfe' },
+    },
+    {
+      label: t.overdueAccounts,
+      value: stats.overdueCount,
+      sub: t.requiresNotice,
+      colors: theme.status.pending,
+    },
+  ];
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-        <LangToggle />
+    <div style={{ fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh', paddingBottom: '30px' }}>
+      <div
+        style={{
+          background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+          padding: '24px 20px 40px 20px',
+          color: '#fff',
+          borderBottomLeftRadius: '24px',
+          borderBottomRightRadius: '24px',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+          <LangToggle />
+        </div>
+        <div style={{ fontSize: '13px', opacity: 0.85, marginBottom: '2px' }}>{t.subtitle}</div>
+        <h1 style={{ fontSize: '26px', fontWeight: 'bold', margin: 0 }}>💧 {t.title}</h1>
       </div>
 
-      <h2 style={{ color: '#333', marginBottom: '20px' }}>{t.title}</h2>
+      <div style={{ padding: '0 20px', marginTop: '-24px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px',
+            marginBottom: '20px',
+          }}
+        >
+          {gridItems.map((item) => (
+            <a key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
+              <div
+                style={{
+                  background: theme.card,
+                  borderRadius: theme.radius,
+                  padding: '18px 14px',
+                  boxShadow: theme.shadow,
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: item.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    margin: '0 auto 10px auto',
+                  }}
+                >
+                  {item.icon}
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: theme.textDark }}>{item.label}</span>
+              </div>
+            </a>
+          ))}
+        </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-        <a href="/consumers" style={{ textDecoration: 'none', flex: 1 }}>
-          <div style={{ background: '#2563eb', color: '#fff', textAlign: 'center', padding: '10px', borderRadius: '10px', fontSize: '13px' }}>
-            {t.consumers}
+        {loading ? (
+          <p style={{ color: theme.textMuted }}>{t.loading}</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+            {statCards.map((card, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: card.colors.bg,
+                  border: `1px solid ${card.colors.border}`,
+                  padding: '16px',
+                  borderRadius: theme.radius,
+                }}
+              >
+                <h3 style={{ color: card.colors.text, fontSize: '13px', margin: '0 0 6px 0', fontWeight: '600' }}>
+                  {card.label}
+                </h3>
+                <p style={{ color: card.colors.text, fontSize: '26px', fontWeight: 'bold', margin: 0 }}>
+                  {card.value}
+                </p>
+                <span style={{ color: card.colors.text, fontSize: '12px', opacity: 0.85 }}>{card.sub}</span>
+              </div>
+            ))}
           </div>
-        </a>
-        <a href="/bills" style={{ textDecoration: 'none', flex: 1 }}>
-          <div style={{ background: '#111827', color: '#fff', textAlign: 'center', padding: '10px', borderRadius: '10px', fontSize: '13px' }}>
-            {t.bills}
+        )}
+
+        <a href="/niyam" style={{ textDecoration: 'none', display: 'block' }}>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #fecdd3',
+              color: '#b91c1c',
+              textAlign: 'center',
+              padding: '14px',
+              borderRadius: theme.radius,
+              fontSize: '13px',
+              fontWeight: 'bold',
+            }}
+          >
+            {t.niyam}
           </div>
         </a>
       </div>
-
-      <a href="/mybill" style={{ textDecoration: 'none', display: 'block', marginBottom: '20px' }}>
-        <div style={{ background: '#059669', color: '#fff', textAlign: 'center', padding: '10px', borderRadius: '10px', fontSize: '13px' }}>
-          {t.myBill}
-        </div>
-      </a>
-
-      {loading ? (
-        <p>{t.loading}</p>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
-          <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '15px', borderRadius: '12px' }}>
-            <h3 style={{ color: '#065f46', fontSize: '14px', margin: '0 0 5px 0' }}>{t.totalCollected}</h3>
-            <p style={{ color: '#064e3b', fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
-              ₹ {stats.totalCollected.toLocaleString('en-IN')}
-            </p>
-            <span style={{ color: '#047857', fontSize: '12px' }}>{stats.paidCount} {t.paidBills}</span>
-          </div>
-
-          <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', padding: '15px', borderRadius: '12px' }}>
-            <h3 style={{ color: '#9f1239', fontSize: '14px', margin: '0 0 5px 0' }}>{t.totalPending}</h3>
-            <p style={{ color: '#881337', fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
-              ₹ {stats.totalPending.toLocaleString('en-IN')}
-            </p>
-            <span style={{ color: '#be123c', fontSize: '12px' }}>{stats.unpaidCount} {t.unpaidBills}</span>
-          </div>
-
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '15px', borderRadius: '12px' }}>
-            <h3 style={{ color: '#1e40af', fontSize: '14px', margin: '0 0 5px 0' }}>{t.activeConnections}</h3>
-            <p style={{ color: '#1e3a8a', fontSize: '24px', fontWeight: 'bold', margin: 0 }}>{stats.activeConnections}</p>
-            <span style={{ color: '#2563eb', fontSize: '12px' }}>{t.totalConsumers}</span>
-          </div>
-
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', padding: '15px', borderRadius: '12px' }}>
-            <h3 style={{ color: '#92400e', fontSize: '14px', margin: '0 0 5px 0' }}>{t.overdueAccounts}</h3>
-            <p style={{ color: '#78350f', fontSize: '24px', fontWeight: 'bold', margin: 0 }}>{stats.overdueCount}</p>
-            <span style={{ color: '#b45309', fontSize: '12px' }}>{t.requiresNotice}</span>
-          </div>
-        </div>
-      )}
-      <a href="/reports" style={{ textDecoration: 'none', display: 'block', marginTop: '20px' }}>
-        <div style={{ background: '#7c3aed', color: '#fff', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold' }}>
-          {t.report}
-        </div>
-      </a>
-      <a href="/niyam" style={{ textDecoration: 'none', display: 'block', marginTop: '20px' }}>
-        <div style={{ background: '#b91c1c', color: '#fff', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '13px', fontWeight: 'bold' }}>
-          {t.niyam}
-        </div>
-      </a>
     </div>
   );
 }
