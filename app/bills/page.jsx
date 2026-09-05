@@ -402,7 +402,7 @@ export default function BillsPage() {
       >
         <h2 style={{ margin: 0, fontSize: '19px' }}>{t.pageTitle}</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          
+         <a
             href="/settings"
             style={{
               background: 'rgba(255,255,255,0.2)',
