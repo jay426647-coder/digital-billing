@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import * as XLSX from 'xlsx';
+import { getLang } from '../../lib/i18n';
 
 const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -23,7 +24,81 @@ function extractField(row, aliases) {
   return '';
 }
 
+const text = {
+  hi: {
+    pageTitle: '👥 उपभोक्ता / परिवार',
+    logout: 'लॉगआउट',
+    addNew: '+ नया उपभोक्ता जोड़ो',
+    cancel: 'रद्द करें',
+    bulkUpload: '📊 Excel/CSV से Upload करो',
+    bulkInfo: (name, ward, mobile) => (
+      <>Excel (.xlsx) ya CSV file upload karein. File me ye columns hone chahiye: <b>{name}</b>, <b>{ward}</b>, <b>{mobile}</b> (column ke naam thoda alag ho to bhi chalega). Consumer ID system khud generate kar dega.</>
+    ),
+    foundReady: (count, skipped) => `${count} उपभोक्ता मिले, add करने के लिए तैयार हैं${skipped > 0 ? ` (${skipped} rows skip हो गईं, incomplete data की वजह से)` : ''}.`,
+    addingInProgress: 'Add हो रहा है...',
+    addAllBtn: (count) => `सबको (${count}) Add करो`,
+    consumerId: 'Consumer ID',
+    name: 'नाम',
+    wardNumber: 'वार्ड नंबर',
+    mobileNumber: 'मोबाइल नंबर',
+    updateBtn: 'Update करो',
+    saveBtn: 'Save करो',
+    searchPlaceholder: '🔍 नाम, Consumer ID, वार्ड या मोबाइल से ढूंढो...',
+    loading: 'लोड हो रहा है...',
+    noConsumers: 'अभी कोई उपभोक्ता add नहीं हुआ है।',
+    noSearchResult: 'Search से कोई उपभोक्ता नहीं मिला।',
+    found: (count) => `${count} उपभोक्ता मिले`,
+    ward: 'वार्ड',
+    edit: 'Edit',
+    delete: 'Delete',
+    hideHistory: '▲ History छुपाओ',
+    showHistory: '▼ बिल History देखो',
+    noBillYet: 'इस उपभोक्ता का अभी कोई बिल नहीं बना है।',
+    fillAllFields: 'सभी fields भरना ज़रूरी है।',
+    confirmDelete: 'क्या आप सच में इस उपभोक्ता को delete करना चाहते हैं?',
+    noValidRow: 'कोई valid row नहीं मिली। File में "Name", "Ward" और "Mobile" columns होने चाहिए।',
+    fileReadError: 'File पढ़ने में दिक्कत आई। सही Excel (.xlsx) या CSV file try करें।',
+    bulkSuccess: (count) => `${count} उपभोक्ता सफलतापूर्वक add हो गए!`,
+  },
+  en: {
+    pageTitle: '👥 Consumers / Households',
+    logout: 'Logout',
+    addNew: '+ Add New Consumer',
+    cancel: 'Cancel',
+    bulkUpload: '📊 Upload via Excel/CSV',
+    bulkInfo: (name, ward, mobile) => (
+      <>Upload an Excel (.xlsx) or CSV file. It must have these columns: <b>{name}</b>, <b>{ward}</b>, <b>{mobile}</b> (slightly different column names also work). The Consumer ID will be auto-generated.</>
+    ),
+    foundReady: (count, skipped) => `${count} consumers found, ready to add${skipped > 0 ? ` (${skipped} rows skipped due to incomplete data)` : ''}.`,
+    addingInProgress: 'Adding...',
+    addAllBtn: (count) => `Add All (${count})`,
+    consumerId: 'Consumer ID',
+    name: 'Name',
+    wardNumber: 'Ward Number',
+    mobileNumber: 'Mobile Number',
+    updateBtn: 'Update',
+    saveBtn: 'Save',
+    searchPlaceholder: '🔍 Search by Name, Consumer ID, Ward or Mobile...',
+    loading: 'Loading...',
+    noConsumers: 'No consumers added yet.',
+    noSearchResult: 'No consumer found for this search.',
+    found: (count) => `${count} consumer${count !== 1 ? 's' : ''} found`,
+    ward: 'Ward',
+    edit: 'Edit',
+    delete: 'Delete',
+    hideHistory: '▲ Hide History',
+    showHistory: '▼ View Bill History',
+    noBillYet: 'No bill has been generated for this consumer yet.',
+    fillAllFields: 'All fields are required.',
+    confirmDelete: 'Are you sure you want to delete this consumer?',
+    noValidRow: 'No valid rows found. The file must have "Name", "Ward" and "Mobile" columns.',
+    fileReadError: 'There was a problem reading the file. Try a valid Excel (.xlsx) or CSV file.',
+    bulkSuccess: (count) => `${count} consumers added successfully!`,
+  },
+};
+
 export default function ConsumersPage() {
+  const [lang, setLang] = useState('hi');
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [panchayatId, setPanchayatId] = useState(null);
   const [consumers, setConsumers] = useState([]);
@@ -44,13 +119,18 @@ export default function ConsumersPage() {
   const [historyCache, setHistoryCache] = useState({});
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Bulk upload state
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [bulkRows, setBulkRows] = useState([]);
   const [bulkSkipped, setBulkSkipped] = useState(0);
   const [bulkError, setBulkError] = useState('');
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState('');
+
+  useEffect(() => {
+    setLang(getLang());
+  }, []);
+
+  const t = text[lang];
 
   const statusColors = {
     PAID: { bg: '#ecfdf5', text: '#065f46' },
@@ -122,7 +202,7 @@ export default function ConsumersPage() {
     setError('');
 
     if (!form.consumer_id_str || !form.name || !form.ward_number || !form.mobile_number) {
-      setError('Sabhi fields bharna zaroori hai.');
+      setError(t.fillAllFields);
       return;
     }
 
@@ -162,7 +242,7 @@ export default function ConsumersPage() {
   }
 
   async function handleDelete(id) {
-    const confirmed = window.confirm('Kya aap sach me is consumer ko delete karna chahte hain?');
+    const confirmed = window.confirm(t.confirmDelete);
     if (!confirmed) return;
 
     const { error } = await supabase.from('consumers').delete().eq('id', id);
@@ -241,14 +321,14 @@ export default function ConsumersPage() {
         });
 
         if (parsed.length === 0) {
-          setBulkError('Koi valid row nahi mili. File me "Name", "Ward" aur "Mobile" columns hone chahiye.');
+          setBulkError(t.noValidRow);
           return;
         }
 
         setBulkRows(parsed);
         setBulkSkipped(skipped);
       } catch (err) {
-        setBulkError('File padhne me dikkat aayi. Sahi Excel (.xlsx) ya CSV file try karein.');
+        setBulkError(t.fileReadError);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -286,7 +366,7 @@ export default function ConsumersPage() {
       return;
     }
 
-    setBulkResult(`${payload.length} consumers safaltapoorvak add ho gaye!`);
+    setBulkResult(t.bulkSuccess(payload.length));
     setBulkRows([]);
     setBulkUploading(false);
     fetchConsumers();
@@ -306,7 +386,7 @@ export default function ConsumersPage() {
   if (checkingAuth) {
     return (
       <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-        <p>Loading...</p>
+        <p>{t.loading}</p>
       </div>
     );
   }
@@ -314,12 +394,12 @@ export default function ConsumersPage() {
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ color: '#333', margin: 0 }}>👥 Consumers / Households</h2>
+        <h2 style={{ color: '#333', margin: 0 }}>{t.pageTitle}</h2>
         <button
           onClick={handleLogout}
           style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
         >
-          Logout
+          {t.logout}
         </button>
       </div>
 
@@ -351,7 +431,7 @@ export default function ConsumersPage() {
                 cursor: 'pointer',
               }}
             >
-              {showForm ? 'Cancel' : '+ Naya Consumer Add Karo'}
+              {showForm ? t.cancel : t.addNew}
             </button>
 
             <button
@@ -373,14 +453,14 @@ export default function ConsumersPage() {
                 cursor: 'pointer',
               }}
             >
-              {showBulkUpload ? 'Cancel' : '📊 Excel/CSV Se Upload Karo'}
+              {showBulkUpload ? t.cancel : t.bulkUpload}
             </button>
           </div>
 
           {showBulkUpload && (
             <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
               <p style={{ fontSize: '13px', color: '#374151', marginTop: 0 }}>
-                Excel (.xlsx) ya CSV file upload karein. File me ye columns hone chahiye: <b>Name</b>, <b>Ward</b>, <b>Mobile</b> (column ke naam thoda alag ho to bhi chalega — jaise "Naam", "Ward Number", "Mobile Number"). Consumer ID system khud generate kar dega.
+                {t.bulkInfo(t.name, t.wardNumber, t.mobileNumber)}
               </p>
 
               <input
@@ -406,8 +486,7 @@ export default function ConsumersPage() {
                 <>
                   <div style={{ marginTop: '15px', marginBottom: '10px' }}>
                     <p style={{ fontSize: '13px', color: '#374151', fontWeight: 'bold', margin: 0 }}>
-                      {bulkRows.length} consumers milein, add karne ke liye taiyar hain
-                      {bulkSkipped > 0  ? ` (${bulkSkipped} rows skip ho gayi, incomplete data ki wajah se)` : ''}.
+                      {t.foundReady(bulkRows.length, bulkSkipped)}
                     </p>
                   </div>
 
@@ -425,7 +504,7 @@ export default function ConsumersPage() {
                       >
                         <span style={{ color: '#111827' }}>{row.name}</span>
                         <span style={{ color: '#6b7280' }}>
-                          Ward {row.ward_number} • {row.mobile_number}
+                          {t.ward} {row.ward_number} • {row.mobile_number}
                         </span>
                       </div>
                     ))}
@@ -445,7 +524,7 @@ export default function ConsumersPage() {
                       opacity: bulkUploading ? 0.7 : 1,
                     }}
                   >
-                    {bulkUploading ? 'Add Ho Raha Hai...' : `Sabko (${bulkRows.length}) Add Karo`}
+                    {bulkUploading ? t.addingInProgress : t.addAllBtn(bulkRows.length)}
                   </button>
                 </>
               )}
@@ -458,7 +537,7 @@ export default function ConsumersPage() {
               style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}
             >
               <div style={{ marginBottom: '10px' }}>
-                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>Consumer ID</label>
+                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.consumerId}</label>
                 <input
                   type="text"
                   value={form.consumer_id_str}
@@ -468,7 +547,7 @@ export default function ConsumersPage() {
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>Naam</label>
+                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.name}</label>
                 <input
                   type="text"
                   value={form.name}
@@ -478,7 +557,7 @@ export default function ConsumersPage() {
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>Ward Number</label>
+                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.wardNumber}</label>
                 <input
                   type="number"
                   value={form.ward_number}
@@ -488,7 +567,7 @@ export default function ConsumersPage() {
               </div>
 
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>Mobile Number</label>
+                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.mobileNumber}</label>
                 <input
                   type="text"
                   value={form.mobile_number}
@@ -501,7 +580,7 @@ export default function ConsumersPage() {
                 type="submit"
                 style={{ background: '#059669', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
               >
-                {editingId ? 'Update Karo' : 'Save Karo'}
+                {editingId ? t.updateBtn : t.saveBtn}
               </button>
             </form>
           )}
@@ -511,21 +590,21 @@ export default function ConsumersPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Naam, Consumer ID, Ward ya Mobile se dhundo..."
+              placeholder={t.searchPlaceholder}
               style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '14px', background: '#fff' }}
             />
           </div>
 
           {loading ? (
-            <p>Loading...</p>
+            <p>{t.loading}</p>
           ) : consumers.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>Abhi koi consumer add nahi hua hai.</p>
+            <p style={{ color: '#6b7280' }}>{t.noConsumers}</p>
           ) : filteredConsumers.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>Search se koi consumer nahi mila.</p>
+            <p style={{ color: '#6b7280' }}>{t.noSearchResult}</p>
           ) : (
             <>
               <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '10px' }}>
-                {filteredConsumers.length} consumer{filteredConsumers.length !== 1 ? 's' : ''} mile
+                {t.found(filteredConsumers.length)}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {filteredConsumers.map((c) => (
@@ -537,7 +616,7 @@ export default function ConsumersPage() {
                       <div>
                         <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{c.name}</p>
                         <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                          ID: {c.consumer_id_str} • Ward {c.ward_number} • {c.mobile_number}
+                          ID: {c.consumer_id_str} • {t.ward} {c.ward_number} • {c.mobile_number}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -545,13 +624,13 @@ export default function ConsumersPage() {
                           onClick={() => handleEdit(c)}
                           style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                         >
-                          Edit
+                          {t.edit}
                         </button>
                         <button
                           onClick={() => handleDelete(c.id)}
                           style={{ background: '#fff1f2', color: '#9f1239', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                         >
-                          Delete
+                          {t.delete}
                         </button>
                       </div>
                     </div>
@@ -560,15 +639,15 @@ export default function ConsumersPage() {
                       onClick={() => toggleHistory(c.id)}
                       style={{ background: '#f3f4f6', color: '#374151', border: 'none', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', marginTop: '10px', width: '100%' }}
                     >
-                      {expandedId === c.id ? '▲ History Chhupao' : '▼ Bill History Dekho'}
+                      {expandedId === c.id ? t.hideHistory : t.showHistory}
                     </button>
 
                     {expandedId === c.id && (
                       <div style={{ marginTop: '10px', borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>
                         {historyLoading && !historyCache[c.id] ? (
-                          <p style={{ fontSize: '12px', color: '#6b7280' }}>Loading...</p>
+                          <p style={{ fontSize: '12px', color: '#6b7280' }}>{t.loading}</p>
                         ) : (historyCache[c.id] || []).length === 0 ? (
-                          <p style={{ fontSize: '12px', color: '#6b7280' }}>Is consumer ka abhi koi bill nahi bana hai.</p>
+                          <p style={{ fontSize: '12px', color: '#6b7280' }}>{t.noBillYet}</p>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             {historyCache[c.id].map((b) => {
