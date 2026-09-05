@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatBillPeriod, getMonthsOverdue, getCurrentCycle } from '../../lib/billUtils';
 import { getLang } from '../../lib/i18n';
+import { theme } from '../../lib/theme';
 
 const text = {
   hi: {
-    title: '🔍 Apna Bill Dekhein',
+    title: 'अपना बिल देखें',
     subtitle: 'Consumer ID ya Mobile Number daal kar apna billing status dekhein.',
     inputLabel: 'Consumer ID ya Mobile Number',
     placeholder: 'Jaise: C001 ya 9876543210',
@@ -25,7 +26,7 @@ const text = {
     noRecordFound: 'Koi record nahi mila.',
   },
   en: {
-    title: '🔍 View My Bill',
+    title: 'View My Bill',
     subtitle: 'Enter Consumer ID or Mobile Number to check your billing status.',
     inputLabel: 'Consumer ID or Mobile Number',
     placeholder: 'e.g. C001 or 9876543210',
@@ -124,123 +125,135 @@ export default function MyBillPage() {
     .reduce((sum, b) => sum + Number(b.amount), 0);
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <h2 style={{ color: '#333', marginBottom: '5px' }}>{t.title}</h2>
-      <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
-        {t.subtitle}
-      </p>
+    <div style={{ fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh', paddingBottom: '20px' }}>
+      <div
+        style={{
+          background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})`,
+          padding: '24px 20px',
+          color: '#fff',
+          borderBottomLeftRadius: '20px',
+          borderBottomRightRadius: '20px',
+          marginBottom: '20px',
+        }}
+      >
+        <h2 style={{ margin: '0 0 4px 0', fontSize: '22px' }}>🔍 {t.title}</h2>
+        <p style={{ fontSize: '13px', opacity: 0.9, margin: 0 }}>{t.subtitle}</p>
+      </div>
 
-      <form onSubmit={handleSearch} style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
-        <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
-          {t.inputLabel}
-        </label>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t.placeholder}
-          style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '12px', fontSize: '15px' }}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            background: loading ? '#9ca3af' : '#2563eb',
-            color: '#fff',
-            border: 'none',
-            padding: '10px 16px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            cursor: loading ? 'default' : 'pointer',
-            width: '100%',
-          }}
-        >
-          {loading ? t.searching : t.searchBtn}
-        </button>
-      </form>
-
-      {error && (
-        <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px' }}>
-          {error}
-        </div>
-      )}
-
-      {consumer && (
-        <>
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '15px', borderRadius: '12px', marginBottom: '15px' }}>
-            <p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px', color: '#1e3a8a' }}>{consumer.name}</p>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#1e40af' }}>
-              {t.idLabel}: {consumer.consumer_id_str} • {t.ward} {consumer.ward_number} • {consumer.mobile_number}
-            </p>
-          </div>
-
-          <div
+      <div style={{ padding: '0 20px' }}>
+        <form onSubmit={handleSearch} style={{ background: theme.card, padding: '16px', borderRadius: theme.radius, marginBottom: '20px', boxShadow: theme.shadow }}>
+          <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
+            {t.inputLabel}
+          </label>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t.placeholder}
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '12px', fontSize: '15px' }}
+          />
+          <button
+            type="submit"
+            disabled={loading}
             style={{
-              background: totalDue > 0 ? '#fff1f2' : '#ecfdf5',
-              border: `1px solid ${totalDue > 0 ? '#fecdd3' : '#a7f3d0'}`,
-              padding: '15px',
-              borderRadius: '12px',
-              marginBottom: '20px',
+              background: loading ? '#9ca3af' : theme.primary,
+              color: '#fff',
+              border: 'none',
+              padding: '12px 16px',
+              borderRadius: theme.radiusSmall,
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: loading ? 'default' : 'pointer',
+              width: '100%',
             }}
           >
-            <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', color: totalDue > 0 ? '#9f1239' : '#065f46' }}>
-              {totalDue > 0 ? t.totalDue : t.noDue}
-            </h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: totalDue > 0 ? '#881337' : '#064e3b' }}>
-              ₹ {totalDue.toLocaleString('en-IN')}
-            </p>
+            {loading ? t.searching : t.searchBtn}
+          </button>
+        </form>
+
+        {error && (
+          <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px' }}>
+            {error}
           </div>
+        )}
 
-          <h3 style={{ fontSize: '15px', color: '#374151', marginBottom: '10px' }}>{t.billHistory}</h3>
-
-          {bills.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>{t.noBills}</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {bills.map((b) => {
-                const colors = statusColors[b.status] || statusColors.PENDING;
-                const monthsOverdue = getMonthsOverdue(b, currentMonth, currentFinancialYear);
-                return (
-                  <div
-                    key={b.id}
-                    style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>
-                        {formatBillPeriod(b)}
-                      </p>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
-                        ₹ {b.amount}
-                      </p>
-                      {b.status === 'OVERDUE' && monthsOverdue > 0 && (
-                        <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
-                          ⏰ {monthsOverdue} {t.overdueSuffix}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      style={{
-                        background: colors.bg,
-                        color: colors.text,
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                      }}
-                    >
-                      {b.status}
-                    </span>
-                  </div>
-                );
-              })}
+        {consumer && (
+          <>
+            <div style={{ background: theme.accentLight, border: '1px solid #bfdbfe', padding: '16px', borderRadius: theme.radius, marginBottom: '15px' }}>
+              <p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px', color: theme.accent }}>{consumer.name}</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: theme.accent }}>
+                {t.idLabel}: {consumer.consumer_id_str} • {t.ward} {consumer.ward_number} • {consumer.mobile_number}
+              </p>
             </div>
-          )}
-        </>
-      )}
 
-      {searched && !consumer && !loading && !error && (
-        <p style={{ color: '#6b7280' }}>{t.noRecordFound}</p>
-      )}
+            <div
+              style={{
+                background: totalDue > 0 ? '#fff1f2' : '#ecfdf5',
+                border: `1px solid ${totalDue > 0 ? '#fecdd3' : '#a7f3d0'}`,
+                padding: '16px',
+                borderRadius: theme.radius,
+                marginBottom: '20px',
+              }}
+            >
+              <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', color: totalDue > 0 ? '#9f1239' : '#065f46' }}>
+                {totalDue > 0 ? t.totalDue : t.noDue}
+              </h3>
+              <p style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', color: totalDue > 0 ? '#881337' : '#064e3b' }}>
+                ₹ {totalDue.toLocaleString('en-IN')}
+              </p>
+            </div>
+
+            <h3 style={{ fontSize: '15px', color: theme.textDark, marginBottom: '10px' }}>{t.billHistory}</h3>
+
+            {bills.length === 0 ? (
+              <p style={{ color: theme.textMuted }}>{t.noBills}</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {bills.map((b) => {
+                  const colors = statusColors[b.status] || statusColors.PENDING;
+                  const monthsOverdue = getMonthsOverdue(b, currentMonth, currentFinancialYear);
+                  return (
+                    <div
+                      key={b.id}
+                      style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '14px', boxShadow: theme.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 'bold', color: theme.textDark }}>
+                          {formatBillPeriod(b)}
+                        </p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: theme.textDark }}>
+                          ₹ {b.amount}
+                        </p>
+                        {b.status === 'OVERDUE' && monthsOverdue > 0 && (
+                          <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
+                            ⏰ {monthsOverdue} {t.overdueSuffix}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          background: colors.bg,
+                          color: colors.text,
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {b.status}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {searched && !consumer && !loading && !error && (
+          <p style={{ color: theme.textMuted }}>{t.noRecordFound}</p>
+        )}
+      </div>
     </div>
   );
 }
