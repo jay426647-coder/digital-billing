@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getLang } from '../../lib/i18n';
+import { theme } from '../../lib/theme';
 
 const text = {
   hi: {
@@ -32,17 +33,39 @@ export default function NiyamPage() {
   const t = text[lang];
 
   return (
-    <div style={{ maxWidth: '700px', margin: '40px auto', padding: '20px' }}>
-      <h1 style={{ color: '#b91c1c', fontSize: '24px', marginBottom: '20px' }}>
-        {t.heading}
-      </h1>
-      <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '20px', lineHeight: '1.8' }}>
-        <p>{t.para1}</p>
-        <p style={{ marginTop: '15px' }}>{t.para2}</p>
+    <div style={{ fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh', paddingBottom: '20px' }}>
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #dc2626, #7f1d1d)',
+          padding: '24px 20px',
+          color: '#fff',
+          borderBottomLeftRadius: '20px',
+          borderBottomRightRadius: '20px',
+          marginBottom: '20px',
+        }}
+      >
+        <h1 style={{ margin: 0, fontSize: '22px' }}>{t.heading}</h1>
       </div>
-      <a href="/" style={{ display: 'inline-block', marginTop: '20px', color: '#2563eb' }}>
-        {t.back}
-      </a>
+
+      <div style={{ padding: '0 20px', maxWidth: '700px', margin: '0 auto' }}>
+        <div
+          style={{
+            background: theme.card,
+            border: '1px solid #fecdd3',
+            borderRadius: theme.radius,
+            padding: '20px',
+            lineHeight: '1.8',
+            boxShadow: theme.shadow,
+            color: theme.textDark,
+          }}
+        >
+          <p>{t.para1}</p>
+          <p style={{ marginTop: '15px' }}>{t.para2}</p>
+        </div>
+        <a href="/" style={{ display: 'inline-block', marginTop: '20px', color: theme.accent, fontWeight: 'bold', textDecoration: 'none' }}>
+          {t.back}
+        </a>
+      </div>
     </div>
   );
 }
