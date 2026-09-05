@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatBillPeriod, getMonthsOverdue, getAbsoluteMonthIndex } from '../../lib/billUtils';
 import { getLang } from '../../lib/i18n';
+import { theme } from '../../lib/theme';
 
 const text = {
   hi: {
@@ -378,22 +379,34 @@ export default function BillsPage() {
 
   if (checkingAuth) {
     return (
-      <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
+      <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh' }}>
         <p>{t.loading}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-        <h2 style={{ color: '#333', margin: 0 }}>{t.pageTitle}</h2>
+    <div style={{ fontFamily: 'sans-serif', backgroundColor: theme.bg, minHeight: '100vh', paddingBottom: '20px' }}>
+      <div
+        style={{
+          background: `linear-gradient(135deg, ${theme.primaryDark}, ${theme.accent})`,
+          padding: '20px',
+          color: '#fff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottomLeftRadius: '20px',
+          borderBottomRightRadius: '20px',
+          marginBottom: '20px',
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: '19px' }}>{t.pageTitle}</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-         <a 
+          
             href="/settings"
             style={{
-              background: '#e5e7eb',
-              color: '#374151',
+              background: 'rgba(255,255,255,0.2)',
+              color: '#fff',
               border: 'none',
               padding: '6px 12px',
               borderRadius: '6px',
@@ -406,26 +419,28 @@ export default function BillsPage() {
           </a>
           <button
             onClick={handleLogout}
-            style={{ background: '#e5e7eb', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+            style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
           >
             {t.logout}
           </button>
         </div>
       </div>
 
+      <div style={{ padding: '0 20px' }}>
+
       {error && (
-        <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginTop: '15px', marginBottom: '15px', fontSize: '13px' }}>
+        <div style={{ background: '#fff1f2', color: '#9f1239', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '13px' }}>
           {error}
         </div>
       )}
 
       {!panchayatId ? null : (
         <>
-          <p style={{ color: '#6b7280', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
+          <p style={{ color: theme.textMuted, fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
             {t.currentCycle}: {label}
           </p>
 
-          <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+          <div style={{ background: theme.card, padding: '16px', borderRadius: theme.radius, marginBottom: '20px', boxShadow: theme.shadow }}>
             <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
               {t.amountLabel}
             </label>
@@ -439,11 +454,11 @@ export default function BillsPage() {
               onClick={handleGenerateBills}
               disabled={generating}
               style={{
-                background: generating ? '#9ca3af' : '#2563eb',
+                background: generating ? '#9ca3af' : theme.accent,
                 color: '#fff',
                 border: 'none',
                 padding: '10px 16px',
-                borderRadius: '8px',
+                borderRadius: theme.radiusSmall,
                 fontSize: '14px',
                 cursor: generating ? 'default' : 'pointer',
                 width: '100%',
@@ -453,14 +468,14 @@ export default function BillsPage() {
             </button>
           </div>
 
-          <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#111827' }}>{t.paymentBoxTitle}</h3>
-            <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#6b7280' }}>
+          <div style={{ background: theme.card, padding: '16px', borderRadius: theme.radius, marginBottom: '20px', boxShadow: theme.shadow }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '15px', color: theme.textDark }}>{t.paymentBoxTitle}</h3>
+            <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: theme.textMuted }}>
               {t.paymentBoxSub}
             </p>
 
             {consumersWithDues.length === 0 ? (
-              <p style={{ fontSize: '13px', color: '#6b7280' }}>{t.noDues}</p>
+              <p style={{ fontSize: '13px', color: theme.textMuted }}>{t.noDues}</p>
             ) : (
               <>
                 <select
@@ -514,11 +529,11 @@ export default function BillsPage() {
                         disabled={allocating}
                         style={{
                           flex: 1,
-                          background: allocating ? '#9ca3af' : '#059669',
+                          background: allocating ? '#9ca3af' : theme.primary,
                           color: '#fff',
                           border: 'none',
                           padding: '10px 16px',
-                          borderRadius: '8px',
+                          borderRadius: theme.radiusSmall,
                           fontSize: '14px',
                           cursor: allocating ? 'default' : 'pointer',
                         }}
@@ -527,7 +542,7 @@ export default function BillsPage() {
                       </button>
                       <button
                         onClick={() => setShowPayQr(!showPayQr)}
-                        style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
+                        style={{ background: theme.accentLight, color: theme.accent, border: 'none', padding: '10px 16px', borderRadius: theme.radiusSmall, fontSize: '14px', cursor: 'pointer' }}
                       >
                         {t.qrBtn}
                       </button>
@@ -538,14 +553,14 @@ export default function BillsPage() {
                         {payQrSrc ? (
                           <>
                             <img src={payQrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
-                            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                            <p style={{ fontSize: '12px', color: theme.textMuted, marginTop: '8px' }}>
                               {t.qrNote(selectedConsumerTotalDue)}
                             </p>
                           </>
                         ) : (
                           <p style={{ fontSize: '13px', color: '#9f1239' }}>
                             {t.settingsFirst}{' '}
-                            <a href="/settings" style={{ color: '#1e40af' }}>
+                            <a href="/settings" style={{ color: theme.accent }}>
                               {t.settings}
                             </a>
                             {t.settingsFirstEnd}
@@ -562,7 +577,7 @@ export default function BillsPage() {
               </>
             )}
           </div>
-        
+
           <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', flexWrap: 'wrap' }}>
             {[
               { key: 'ALL', label: t.filterAll },
@@ -574,7 +589,7 @@ export default function BillsPage() {
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 style={{
-                  background: filter === f.key ? '#111827' : '#e5e7eb',
+                  background: filter === f.key ? theme.accent : '#e5e7eb',
                   color: filter === f.key ? '#fff' : '#374151',
                   border: 'none',
                   padding: '6px 12px',
@@ -591,7 +606,7 @@ export default function BillsPage() {
           {loading ? (
             <p>{t.loading}</p>
           ) : filteredBills.length === 0 ? (
-            <p style={{ color: '#6b7280' }}>{t.noBillFound}</p>
+            <p style={{ color: theme.textMuted }}>{t.noBillFound}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {filteredBills.map((b) => {
@@ -609,17 +624,17 @@ export default function BillsPage() {
                 return (
                   <div
                     key={b.id}
-                    style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}
+                    style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '14px', boxShadow: theme.shadow }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>
+                        <p style={{ margin: 0, fontWeight: 'bold', color: theme.textDark }}>
                           {b.consumers?.name || t.unknown}
                         </p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: theme.textMuted }}>
                           ID: {b.consumers?.consumer_id_str} • {t.ward} {b.consumers?.ward_number} • {formatBillPeriod(b)}
                         </p>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: '#111827' }}>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: theme.textDark }}>
                           ₹ {b.amount}
                         </p>
                         {b.status === 'OVERDUE' && monthsOverdue > 0 && (
@@ -646,7 +661,7 @@ export default function BillsPage() {
                       <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => markPaid(b.id)}
-                          style={{ background: '#059669', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                          style={{ background: theme.primary, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: theme.radiusSmall, fontSize: '12px', cursor: 'pointer' }}
                         >
                           {t.markPaid}
                         </button>
@@ -660,7 +675,7 @@ export default function BillsPage() {
                         )}
                         <button
                           onClick={() => toggleQr(b.id)}
-                          style={{ background: '#eff6ff', color: '#1e40af', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                          style={{ background: theme.accentLight, color: theme.accent, border: 'none', padding: '6px 12px', borderRadius: theme.radiusSmall, fontSize: '12px', cursor: 'pointer' }}
                         >
                           {qrBillId === b.id ? t.qrHide : t.qrShow}
                         </button>
@@ -672,14 +687,14 @@ export default function BillsPage() {
                         {qrSrc ? (
                           <>
                             <img src={qrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
-                            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
+                            <p style={{ fontSize: '12px', color: theme.textMuted, marginTop: '8px' }}>
                               {t.qrConsumerNote(b.amount)}
                             </p>
                           </>
                         ) : (
                           <p style={{ fontSize: '13px', color: '#9f1239' }}>
                             {t.settingsFirst}{' '}
-                            <a href="/settings" style={{ color: '#1e40af' }}>
+                            <a href="/settings" style={{ color: theme.accent }}>
                               {t.settings}
                             </a>
                             {t.settingsFirstEnd}
@@ -694,6 +709,7 @@ export default function BillsPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
