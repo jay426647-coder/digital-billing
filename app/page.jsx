@@ -24,6 +24,8 @@ const text = {
     overdueAccounts: 'अतिदेय खाते',
     requiresNotice: 'ध्यान देने की जरूरत',
     niyam: '⚠️ नियम और चेतावनी पढ़ें',
+    loginPrompt: 'अपने पंचायत के आंकड़े देखने के लिए लॉगिन करें',
+    loginBtn: 'एडमिन लॉगिन',
   },
   en: {
     title: 'Digital Billing',
@@ -42,11 +44,15 @@ const text = {
     overdueAccounts: 'Overdue Accounts',
     requiresNotice: 'Requires Notice',
     niyam: '⚠️ Rules & Warning',
+    loginPrompt: 'Log in to see your panchayat\'s stats',
+    loginBtn: 'Admin Login',
   },
 };
 
 export default function DigitalBillingDashboard() {
   const [lang, setLang] = useState('hi');
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [stats, setStats] = useState({
     totalCollected: 0,
     paidCount: 0,
@@ -64,11 +70,41 @@ export default function DigitalBillingDashboard() {
   const t = text[lang];
 
   useEffect(() => {
-    async function fetchStats() {
-      const { data: bills } = await supabase.from('bills').select('amount, status');
+    async function checkAuthAndFetch() {
+      const { data } = await supabase.auth.getSession();
+
+      if (!data.session) {
+        setIsLoggedIn(false);
+        setCheckingAuth(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsLoggedIn(true);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('panchayat_id')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (!profile) {
+        setCheckingAuth(false);
+        setLoading(false);
+        return;
+      }
+
+      const panchayatId = profile.panchayat_id;
+
+      const { data: bills } = await supabase
+        .from('bills')
+        .select('amount, status')
+        .eq('panchayat_id', panchayatId);
+
       const { count: consumerCount } = await supabase
         .from('consumers')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('panchayat_id', panchayatId);
 
       const paidBills = (bills || []).filter((b) => b.status === 'PAID');
       const pendingBills = (bills || []).filter((b) => b.status === 'PENDING' || b.status === 'OVERDUE');
@@ -82,10 +118,11 @@ export default function DigitalBillingDashboard() {
         activeConnections: consumerCount || 0,
         overdueCount: overdueBills.length,
       });
+      setCheckingAuth(false);
       setLoading(false);
     }
 
-    fetchStats();
+    checkAuthAndFetch();
   }, []);
 
   const gridItems = [
@@ -181,7 +218,26 @@ export default function DigitalBillingDashboard() {
           ))}
         </div>
 
-        {loading ? (
+        {checkingAuth ? (
+          <p style={{ color: theme.textMuted }}>{t.loading}</p>
+        ) : !isLoggedIn ? (
+          <a href="/login" style={{ textDecoration: 'none', display: 'block', marginBottom: '20px' }}>
+            <div
+              style={{
+                background: theme.card,
+                border: `1px dashed ${theme.border}`,
+                borderRadius: theme.radius,
+                padding: '20px',
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ margin: '0 0 10px 0', color: theme.textMuted, fontSize: '13px' }}>{t.loginPrompt}</p>
+              <span style={{ background: theme.accent, color: '#fff', padding: '8px 16px', borderRadius: theme.radiusSmall, fontSize: '13px', fontWeight: 'bold' }}>
+                {t.loginBtn}
+              </span>
+            </div>
+          </a>
+        ) : loading ? (
           <p style={{ color: theme.textMuted }}>{t.loading}</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
