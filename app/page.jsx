@@ -224,7 +224,8 @@ export default function DigitalBillingDashboard() {
 
         {checkingAuth ? (
           <p style={{ color: theme.textMuted }}>{t.loading}</p>
-        ) : !isLoggedIn ? (
+         ) : !isLoggedIn ? (
+          <>
           <a href="/login" style={{ textDecoration: 'none', display: 'block', marginBottom: '20px' }}>
             <div
               style={{
@@ -248,6 +249,7 @@ export default function DigitalBillingDashboard() {
               {t.signupBtn}
             </a>
           </p>
+          </>
         ) : loading ? (
           <p style={{ color: theme.textMuted }}>{t.loading}</p>
         ) : (
