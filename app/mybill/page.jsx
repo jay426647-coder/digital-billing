@@ -24,6 +24,10 @@ const text = {
     noBills: 'Abhi tak koi bill generate nahi hua hai.',
     overdueSuffix: 'mahine se overdue',
     noRecordFound: 'Koi record nahi mila.',
+    qrShow: '📱 QR Dikhao',
+    qrHide: 'QR Chhupao',
+    qrNote: (amt) => `Is QR ko scan karke ₹${amt} pay karein. Payment ke baad panchayat office ko soochit karein taaki bill "Paid" mark ho sake.`,
+    qrUnavailable: 'Abhi is panchayat ki payment details set nahi hain. Kripya panchayat office se sampark karein.',
   },
   en: {
     title: 'View My Bill',
@@ -42,8 +46,23 @@ const text = {
     noBills: 'No bills generated yet.',
     overdueSuffix: 'months overdue',
     noRecordFound: 'No record found.',
+    qrShow: '📱 Show QR',
+    qrHide: 'Hide QR',
+    qrNote: (amt) => `Scan this QR to pay ₹${amt}. After paying, please inform the panchayat office so your bill can be marked Paid.`,
+    qrUnavailable: 'Payment details for this panchayat are not set up yet. Please contact your panchayat office.',
   },
 };
+
+function buildUpiUri(upiId, payeeName, amount, note) {
+  const params = new URLSearchParams({
+    pa: upiId,
+    pn: payeeName,
+    am: String(amount),
+    tn: note,
+    cu: 'INR',
+  });
+  return `upi://pay?${params.toString()}`;
+}
 
 export default function MyBillPage() {
   const [lang, setLang] = useState('hi');
@@ -51,8 +70,10 @@ export default function MyBillPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [consumer, setConsumer] = useState(null);
+  const [panchayat, setPanchayat] = useState(null);
   const [bills, setBills] = useState([]);
   const [searched, setSearched] = useState(false);
+  const [qrBillId, setQrBillId] = useState(null);
 
   useEffect(() => {
     setLang(getLang());
@@ -72,11 +93,13 @@ export default function MyBillPage() {
     e.preventDefault();
     setError('');
     setSearched(true);
+    setQrBillId(null);
 
     const trimmed = query.trim();
     if (!trimmed) {
       setError(t.emptyInput);
       setConsumer(null);
+      setPanchayat(null);
       setBills([]);
       return;
     }
@@ -98,6 +121,7 @@ export default function MyBillPage() {
 
     if (!consumerData) {
       setConsumer(null);
+      setPanchayat(null);
       setBills([]);
       setError(t.noRecord);
       setLoading(false);
@@ -115,9 +139,20 @@ export default function MyBillPage() {
       setError(billsError.message);
     }
 
+    const { data: panchayatData } = await supabase
+      .from('panchayats')
+      .select('name, upi_id')
+      .eq('id', consumerData.panchayat_id)
+      .single();
+
     setConsumer(consumerData);
+    setPanchayat(panchayatData || null);
     setBills(billsData || []);
     setLoading(false);
+  }
+
+  function toggleQr(billId) {
+    setQrBillId(qrBillId === billId ? null : billId);
   }
 
   const totalDue = bills
@@ -212,36 +247,71 @@ export default function MyBillPage() {
                 {bills.map((b) => {
                   const colors = statusColors[b.status] || statusColors.PENDING;
                   const monthsOverdue = getMonthsOverdue(b, currentMonth, currentFinancialYear);
+                  const note = `${consumer.consumer_id_str} M${b.month} ${b.financial_year}`;
+                  const upiUri =
+                    panchayat && panchayat.upi_id
+                      ? buildUpiUri(panchayat.upi_id, panchayat.name || 'Panchayat', b.amount, note)
+                      : null;
+                  const qrSrc = upiUri
+                    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`
+                    : null;
+
                   return (
                     <div
                       key={b.id}
-                      style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '14px', boxShadow: theme.shadow, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                      style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: theme.radius, padding: '14px', boxShadow: theme.shadow }}
                     >
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 'bold', color: theme.textDark }}>
-                          {formatBillPeriod(b)}
-                        </p>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: theme.textDark }}>
-                          ₹ {b.amount}
-                        </p>
-                        {b.status === 'OVERDUE' && monthsOverdue > 0 && (
-                          <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
-                            ⏰ {monthsOverdue} {t.overdueSuffix}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 'bold', color: theme.textDark }}>
+                            {formatBillPeriod(b)}
                           </p>
-                        )}
+                          <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 'bold', color: theme.textDark }}>
+                            ₹ {b.amount}
+                          </p>
+                          {b.status === 'OVERDUE' && monthsOverdue > 0 && (
+                            <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9f1239', fontWeight: 'bold' }}>
+                              ⏰ {monthsOverdue} {t.overdueSuffix}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          style={{
+                            background: colors.bg,
+                            color: colors.text,
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          {b.status}
+                        </span>
                       </div>
-                      <span
-                        style={{
-                          background: colors.bg,
-                          color: colors.text,
-                          padding: '4px 10px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {b.status}
-                      </span>
+
+                      {b.status !== 'PAID' && (
+                        <button
+                          onClick={() => toggleQr(b.id)}
+                          style={{ background: theme.accentLight, color: theme.accent, border: 'none', padding: '8px 12px', borderRadius: theme.radiusSmall, fontSize: '12px', cursor: 'pointer', marginTop: '10px', width: '100%' }}
+                        >
+                          {qrBillId === b.id ? t.qrHide : t.qrShow}
+                        </button>
+                      )}
+
+                      {qrBillId === b.id && (
+                        <div style={{ marginTop: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '12px', textAlign: 'center' }}>
+                          {qrSrc ? (
+                            <>
+                              <img src={qrSrc} alt="Payment QR" style={{ width: '180px', height: '180px' }} />
+                              <p style={{ fontSize: '12px', color: theme.textMuted, marginTop: '8px' }}>
+                                {t.qrNote(b.amount)}
+                              </p>
+                            </>
+                          ) : (
+                            <p style={{ fontSize: '13px', color: '#9f1239' }}>{t.qrUnavailable}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
