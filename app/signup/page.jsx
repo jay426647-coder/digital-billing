@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 
 export default function SignupPage() {
   const [panchayatName, setPanchayatName] = useState('');
+  const [panchayatCode, setPanchayatCode] = useState('');
   const [district, setDistrict] = useState('');
   const [state, setState] = useState('');
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
 
-    if (!panchayatName || !district || !state || !email || !password) {
+    if (!panchayatName || !panchayatCode || !district || !state || !email || !password) {
       setError('Sabhi fields bharna zaroori hai.');
       return;
     }
@@ -50,7 +51,7 @@ export default function SignupPage() {
 
     const { data: panchayatData, error: panchayatError } = await supabase
       .from('panchayats')
-      .insert([{ name: panchayatName, district, state }])
+      .insert([{ name: panchayatName, district, state, code: panchayatCode.toUpperCase() }])
       .select('id')
       .single();
 
@@ -82,7 +83,7 @@ export default function SignupPage() {
           <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
             Aapki panchayat "{panchayatName}" register ho gayi hai. Ab login karke shuru karein.
           </p>
-          <a
+          
             href="/login"
             style={{
               display: 'block',
@@ -119,6 +120,19 @@ export default function SignupPage() {
               required
               style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '15px' }}
             />
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>Panchayat Ka Chhota Code (jaise HRD)</label>
+            <input
+              type="text"
+              value={panchayatCode}
+              onChange={(e) => setPanchayatCode(e.target.value.toUpperCase())}
+              maxLength={5}
+              required
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', fontSize: '15px', textTransform: 'uppercase' }}
+            />
+            <p style={{ fontSize: '11px', color: '#9ca3af', margin: '4px 0 0 0' }}>3-5 letters, jaise HRD, PKN — har consumer ki ID me isi ka use hoga</p>
           </div>
 
           <div style={{ marginBottom: '12px' }}>
