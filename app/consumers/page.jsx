@@ -102,6 +102,7 @@ export default function ConsumersPage() {
   const [lang, setLang] = useState('hi');
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [panchayatId, setPanchayatId] = useState(null);
+  const [panchayatCode, setPanchayatCode] = useState('');
   const [consumers, setConsumers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -160,6 +161,14 @@ export default function ConsumersPage() {
       }
 
       setPanchayatId(profile.panchayat_id);
+
+      const { data: panchayatRow } = await supabase
+        .from('panchayats')
+        .select('code')
+        .eq('id', profile.panchayat_id)
+        .single();
+
+      setPanchayatCode(panchayatRow?.code || '');
       setCheckingAuth(false);
     }
     checkAuth();
@@ -196,6 +205,19 @@ export default function ConsumersPage() {
     setForm({ consumer_id_str: '', name: '', ward_number: '', mobile_number: '' });
     setEditingId(null);
     setShowForm(false);
+  }
+
+  function getNextConsumerId() {
+    let maxNum = 0;
+    consumers.forEach((c) => {
+      const match = String(c.consumer_id_str).match(/(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    });
+    const prefix = panchayatCode ? `${panchayatCode}-C` : 'C';
+    return prefix + String(maxNum + 1).padStart(3, '0');
   }
 
   async function handleSubmit(e) {
@@ -348,10 +370,12 @@ export default function ConsumersPage() {
       }
     });
 
+    const prefix = panchayatCode ? `${panchayatCode}-C` : 'C';
+
     const payload = bulkRows.map((row, idx) => {
       const num = maxNum + idx + 1;
       return {
-        consumer_id_str: 'C' + String(num).padStart(3, '0'),
+        consumer_id_str: prefix + String(num).padStart(3, '0'),
         name: row.name,
         ward_number: row.ward_number,
         mobile_number: row.mobile_number,
@@ -432,6 +456,7 @@ export default function ConsumersPage() {
                 if (showForm) {
                   resetForm();
                 } else {
+                  setForm({ consumer_id_str: getNextConsumerId(), name: '', ward_number: '', mobile_number: '' });
                   setShowForm(true);
                   resetBulk();
                 }
