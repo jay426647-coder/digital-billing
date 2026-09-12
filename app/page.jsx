@@ -26,6 +26,8 @@ const text = {
     niyam: '⚠️ नियम और चेतावनी पढ़ें',
     loginPrompt: 'अपने पंचायत के आंकड़े देखने के लिए लॉगिन करें',
     loginBtn: 'एडमिन लॉगिन',
+    signupPrompt: 'नई पंचायत हैं?',
+    signupBtn: 'यहाँ रजिस्टर करें',
   },
   en: {
     title: 'Digital Billing',
@@ -46,6 +48,8 @@ const text = {
     niyam: '⚠️ Rules & Warning',
     loginPrompt: 'Log in to see your panchayat\'s stats',
     loginBtn: 'Admin Login',
+    signupPrompt: 'New Panchayat?',
+    signupBtn: 'Register Here', 
   },
 };
 
@@ -231,12 +235,19 @@ export default function DigitalBillingDashboard() {
                 textAlign: 'center',
               }}
             >
-              <p style={{ margin: '0 0 10px 0', color: theme.textMuted, fontSize: '13px' }}>{t.loginPrompt}</p>
+                   <p style={{ margin: '0 0 10px 0', color: theme.textMuted, fontSize: '13px' }}>{t.loginPrompt}</p>
               <span style={{ background: theme.accent, color: '#fff', padding: '8px 16px', borderRadius: theme.radiusSmall, fontSize: '13px', fontWeight: 'bold' }}>
                 {t.loginBtn}
               </span>
             </div>
           </a>
+
+          <p style={{ textAlign: 'center', fontSize: '13px', color: theme.textMuted, marginBottom: '20px' }}>
+            {t.signupPrompt}{' '}
+            <a href="/signup" style={{ color: theme.primary, fontWeight: 'bold', textDecoration: 'none' }}>
+              {t.signupBtn}
+            </a>
+          </p>
         ) : loading ? (
           <p style={{ color: theme.textMuted }}>{t.loading}</p>
         ) : (
