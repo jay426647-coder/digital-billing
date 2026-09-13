@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getLang } from '../../lib/i18n';
 import { theme } from '../../lib/theme';
-
+import BottomNav from '../../components/BottomNav';
 const text = {
   hi: {
     heading: '⚠️ नियम और चेतावनी',
@@ -66,6 +66,7 @@ export default function NiyamPage() {
           {t.back}
         </a>
       </div>
+      <BottomNav active="niyam" />
     </div>
   );
 }
