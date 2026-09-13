@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import LangToggle from '../components/LangToggle';
+import BottomNav from '../components/BottomNav';
 import { getLang } from '../lib/i18n';
 import { theme } from '../lib/theme';
 
@@ -246,6 +247,7 @@ export default function LandingPage() {
 
         <p style={{ textAlign: 'center', fontSize: '12px', color: theme.textMuted }}>{t.footer}</p>
       </div>
+      <BottomNav active="home" />
     </div>
   );
 }
