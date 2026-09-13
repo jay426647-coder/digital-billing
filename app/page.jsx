@@ -116,7 +116,7 @@ export default function LandingPage() {
                   zIndex: 10,
                 }}
               >
-                
+                <a
                   href="/login"
                   style={{
                     display: 'block',
@@ -129,7 +129,7 @@ export default function LandingPage() {
                 >
                   {t.adminLogin}
                 </a>
-                
+                <a
                   href="/signup"
                   style={{
                     display: 'block',
