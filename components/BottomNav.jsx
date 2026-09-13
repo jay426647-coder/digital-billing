@@ -52,7 +52,7 @@ export default function BottomNav({ active }) {
       }}
     >
       {tabs.map((tab) => (
-        <a
+       <a
           key={tab.key}
           href={tab.href}
           style={{
