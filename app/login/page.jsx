@@ -25,7 +25,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = '/consumers';
+     window.location.href = '/dashboard';
   }
 
   return (
