@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { formatBillPeriod, getMonthsOverdue, getCurrentCycle } from '../../lib/billUtils';
 import { getLang } from '../../lib/i18n';
 import { theme } from '../../lib/theme';
-
+import BottomNav from '../../components/BottomNav';
 const text = {
   hi: {
     title: 'अपना बिल देखें',
@@ -324,6 +324,7 @@ export default function MyBillPage() {
           <p style={{ color: theme.textMuted }}>{t.noRecordFound}</p>
         )}
       </div>
+      <BottomNav active="mybill" />
     </div>
   );
 }
