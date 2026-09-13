@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import LangToggle from '../components/LangToggle';
 import { getLang } from '../lib/i18n';
 import { theme } from '../lib/theme';
@@ -12,8 +12,7 @@ const text = {
     subtitle: 'अपना पानी का बिल आसानी से देखें और ऑनलाइन भुगतान करें।',
     myBill: '🔍 अपना बिल देखें',
     adminLogin: '🔐 एडमिन लॉगिन',
-    signupPrompt: 'नई पंचायत हैं?',
-    signupBtn: 'यहाँ रजिस्टर करें',
+    signupBtn: '🏛️ नई पंचायत रजिस्टर करें',
     niyam: '⚠️ नियम और चेतावनी पढ़ें',
   },
   en: {
@@ -22,17 +21,28 @@ const text = {
     subtitle: 'View and pay your water bill online, easily.',
     myBill: '🔍 View My Bill',
     adminLogin: '🔐 Admin Login',
-    signupPrompt: 'New Panchayat?',
-    signupBtn: 'Register Here',
+    signupBtn: '🏛️ Register New Panchayat',
     niyam: '⚠️ Rules & Warning',
   },
 };
 
 export default function LandingPage() {
   const [lang, setLang] = useState('hi');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     setLang(getLang());
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const t = text[lang];
@@ -47,10 +57,73 @@ export default function LandingPage() {
           borderBottomLeftRadius: '24px',
           borderBottomRightRadius: '24px',
           textAlign: 'center',
+          position: 'relative',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
           <LangToggle />
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                color: '#fff',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                fontSize: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ⚙️
+            </button>
+
+            {menuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '40px',
+                  right: 0,
+                  background: '#fff',
+                  borderRadius: theme.radiusSmall,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                  overflow: 'hidden',
+                  width: '220px',
+                  zIndex: 10,
+                }}
+              >
+                
+                  href="/login"
+                  style={{
+                    display: 'block',
+                    padding: '12px 16px',
+                    color: theme.textDark,
+                    textDecoration: 'none',
+                    fontSize: '13px',
+                    borderBottom: `1px solid ${theme.border}`,
+                  }}
+                >
+                  {t.adminLogin}
+                </a>
+                
+                  href="/signup"
+                  style={{
+                    display: 'block',
+                    padding: '12px 16px',
+                    color: theme.textDark,
+                    textDecoration: 'none',
+                    fontSize: '13px',
+                  }}
+                >
+                  {t.signupBtn}
+                </a>
+              </div>
+            )}
+          </div>
         </div>
         <div style={{ fontSize: '50px', marginBottom: '10px' }}>💧</div>
         <h1 style={{ fontSize: '32px', fontWeight: 'bold', margin: '0 0 6px 0' }}>{t.title}</h1>
@@ -71,15 +144,15 @@ export default function LandingPage() {
           <p style={{ color: theme.textMuted, fontSize: '14px', margin: 0, lineHeight: '1.6' }}>{t.subtitle}</p>
         </div>
 
-        <a href="/mybill" style={{ textDecoration: 'none', display: 'block', marginBottom: '14px' }}>
+        <a href="/mybill" style={{ textDecoration: 'none', display: 'block', marginBottom: '20px' }}>
           <div
             style={{
               background: theme.primary,
               color: '#fff',
               textAlign: 'center',
-              padding: '18px',
+              padding: '20px',
               borderRadius: theme.radius,
-              fontSize: '16px',
+              fontSize: '17px',
               fontWeight: 'bold',
               boxShadow: theme.shadow,
             }}
@@ -87,30 +160,6 @@ export default function LandingPage() {
             {t.myBill}
           </div>
         </a>
-
-        <a href="/login" style={{ textDecoration: 'none', display: 'block', marginBottom: '14px' }}>
-          <div
-            style={{
-              background: theme.accent,
-              color: '#fff',
-              textAlign: 'center',
-              padding: '18px',
-              borderRadius: theme.radius,
-              fontSize: '16px',
-              fontWeight: 'bold',
-              boxShadow: theme.shadow,
-            }}
-          >
-            {t.adminLogin}
-          </div>
-        </a>
-
-        <p style={{ textAlign: 'center', fontSize: '13px', color: theme.textMuted, marginBottom: '20px' }}>
-          {t.signupPrompt}{' '}
-          <a href="/signup" style={{ color: theme.primary, fontWeight: 'bold', textDecoration: 'none' }}>
-            {t.signupBtn}
-          </a>
-        </p>
 
         <a href="/niyam" style={{ textDecoration: 'none', display: 'block' }}>
           <div
