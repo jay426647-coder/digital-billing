@@ -1,6 +1,10 @@
 export const metadata = {
-  title: 'Digital Billing - Panchayat Dashboard',
+  title: 'Jal Pay - Panchayat Digital Billing',
   description: 'Panchayat digital billing management dashboard',
+  icons: {
+    icon: '/favicon-32.png',
+    apple: '/logo192.png',
+  },
 };
 
 export default function RootLayout({ children }) {
