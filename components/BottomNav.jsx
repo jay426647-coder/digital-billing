@@ -9,13 +9,13 @@ const text = {
     home: 'होम',
     myBill: 'अपना बिल',
     niyam: 'नियम',
-    other: 'अन्य',
+    other: 'प्रोफ़ाइल',
   },
   en: {
     home: 'Home',
     myBill: 'My Bill',
     niyam: 'Rules',
-    other: 'Other',
+    other: 'Profile',
   },
 };
 
@@ -32,7 +32,7 @@ export default function BottomNav({ active }) {
     { key: 'home', href: '/', icon: '🏠', label: t.home },
     { key: 'mybill', href: '/mybill', icon: '🔍', label: t.myBill },
     { key: 'niyam', href: '/niyam', icon: '⚠️', label: t.niyam },
-    { key: 'other', href: '#', icon: '⋯', label: t.other },
+    { key: 'other', href: '/profile', icon: '👤', label: t.other },
   ];
 
   return (
