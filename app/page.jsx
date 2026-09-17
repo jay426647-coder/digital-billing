@@ -146,7 +146,7 @@ export default function LandingPage() {
             )}
           </div>
         </div>
-        <img src="/logo192.png" alt="Jal Pay" style={{ width: '80px', height: '80px', borderRadius: '18px', marginBottom: '10px' }} />
+        <img src="/logo-header.png" alt="Jal Pay" style={{ width: '80px', height: '80px', borderRadius: '18px', marginBottom: '10px' }} />
         <h1 style={{ fontSize: '32px', fontWeight: 'bold', margin: '0 0 6px 0' }}>{t.title}</h1>
         <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>{t.tagline}</p>
       </div>
