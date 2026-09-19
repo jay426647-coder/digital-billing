@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import * as XLSX from 'xlsx';
+
+const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function SettingsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -12,6 +15,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -84,6 +88,75 @@ export default function SettingsPage() {
     setSaving(false);
   }
 
+  async function handleExportData() {
+    setError('');
+    setExporting(true);
+
+    const { data: consumers, error: consumersError } = await supabase
+      .from('consumers')
+      .select('*')
+      .eq('panchayat_id', panchayatId);
+
+    if (consumersError) {
+      setError(consumersError.message);
+      setExporting(false);
+      return;
+    }
+
+    const { data: bills, error: billsError } = await supabase
+      .from('bills')
+      .select('*')
+      .eq('panchayat_id', panchayatId);
+
+    if (billsError) {
+      setError(billsError.message);
+      setExporting(false);
+      return;
+    }
+
+    const consumerMap = {};
+    (consumers || []).forEach((c) => {
+      consumerMap[c.id] = c;
+    });
+
+    const billRows = (bills || [])
+      .map((b) => {
+        const c = consumerMap[b.consumer_id] || {};
+        return {
+          'Consumer ID': c.consumer_id_str || '',
+          'Naam': c.name || '',
+          'Ward': c.ward_number || '',
+          'Mobile': c.mobile_number || '',
+          'Mahina': monthNames[b.month] || b.month,
+          'Financial Year': b.financial_year,
+          'Amount (Rs)': b.amount,
+          'Status': b.status,
+          'Payment Mode': b.payment_mode || '',
+          'Last Update': b.updated_at ? new Date(b.updated_at).toLocaleString('en-IN') : '',
+        };
+      })
+      .sort((a, b) => (a['Naam'] || '').localeCompare(b['Naam'] || ''));
+
+    const consumerRows = (consumers || []).map((c) => ({
+      'Consumer ID': c.consumer_id_str,
+      'Naam': c.name,
+      'Ward': c.ward_number,
+      'Mobile': c.mobile_number,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const wsConsumers = XLSX.utils.json_to_sheet(consumerRows);
+    const wsBills = XLSX.utils.json_to_sheet(billRows);
+    XLSX.utils.book_append_sheet(wb, wsConsumers, 'Consumers');
+    XLSX.utils.book_append_sheet(wb, wsBills, 'Sabhi Bills');
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `${panchayat?.name || 'Panchayat'}-Full-Data-${dateStr}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+    setExporting(false);
+  }
+
   if (checkingAuth) {
     return (
       <div style={{ padding: '20px', fontFamily: 'sans-serif', backgroundColor: '#f4f6f9', minHeight: '100vh' }}>
@@ -126,7 +199,7 @@ export default function SettingsPage() {
 
           <form
             onSubmit={handleSave}
-            style={{ background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e5e7eb' }}
+            style={{ background: '#fff', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #e5e7eb' }}
           >
             <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
               Panchayat ki UPI ID
@@ -165,6 +238,31 @@ export default function SettingsPage() {
               {saving ? 'Save ho raha hai...' : 'Save Karo'}
             </button>
           </form>
+
+          <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+            <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: '#111827', fontSize: '14px' }}>
+              📥 पूरा Data Download करो
+            </p>
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: 0, marginBottom: '10px' }}>
+              Sabhi consumers aur sabhi bills (kisne diya, kisne nahi) ek Excel file me download karo — kisi bhi adhikari ko WhatsApp/email se bhejне ke liye.
+            </p>
+            <button
+              onClick={handleExportData}
+              disabled={exporting}
+              style={{
+                background: exporting ? '#9ca3af' : '#059669',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: exporting ? 'default' : 'pointer',
+                width: '100%',
+              }}
+            >
+              {exporting ? 'Ban raha hai...' : '📥 Poora Data Download Karo (Excel)'}
+            </button>
+          </div>
         </>
       )}
     </div>
