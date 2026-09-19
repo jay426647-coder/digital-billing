@@ -244,7 +244,7 @@ export default function SettingsPage() {
               📥 पूरा Data Download करो
             </p>
             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: 0, marginBottom: '10px' }}>
-              Sabhi consumers aur sabhi bills (kisne diya, kisne nahi) ek Excel file me download karo — kisi bhi adhikari ko WhatsApp/email se bhejне ke liye.
+              Sabhi consumers aur sabhi bills (kisne diya, kisne nahi) ek Excel file me download karo — kisi bhi adhikari ko WhatsApp/email se bhejnе ke liye.
             </p>
             <button
               onClick={handleExportData}
