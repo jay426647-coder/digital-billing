@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import * as XLSX from 'xlsx';
+import { formatBillPeriod, getAbsoluteMonthIndex } from '../../lib/billUtils';
 
 const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -16,6 +17,8 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [allBills, setAllBills] = useState([]);
+  const [selectedPeriod, setSelectedPeriod] = useState('ALL');
 
   useEffect(() => {
     async function checkAuth() {
@@ -59,6 +62,13 @@ export default function SettingsPage() {
         setPanchayat(data);
         setUpiId(data.upi_id || '');
       }
+
+      const { data: billsData } = await supabase
+        .from('bills')
+        .select('month, financial_year')
+        .eq('panchayat_id', panchayatId);
+
+      setAllBills(billsData || []);
       setLoading(false);
     }
     if (!checkingAuth && panchayatId) fetchPanchayat();
@@ -88,6 +98,19 @@ export default function SettingsPage() {
     setSaving(false);
   }
 
+  const periodOptions = [];
+  const seen = new Set();
+  allBills
+    .slice()
+    .sort((a, b) => getAbsoluteMonthIndex(b.financial_year, b.month) - getAbsoluteMonthIndex(a.financial_year, a.month))
+    .forEach((b) => {
+      const key = `${b.financial_year}-${b.month}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        periodOptions.push({ key, month: b.month, financial_year: b.financial_year, label: formatBillPeriod(b) });
+      }
+    });
+
   async function handleExportData() {
     setError('');
     setExporting(true);
@@ -103,10 +126,13 @@ export default function SettingsPage() {
       return;
     }
 
-    const { data: bills, error: billsError } = await supabase
-      .from('bills')
-      .select('*')
-      .eq('panchayat_id', panchayatId);
+    let billsQuery = supabase.from('bills').select('*').eq('panchayat_id', panchayatId);
+    if (selectedPeriod !== 'ALL') {
+      const [fy, m] = selectedPeriod.split('|');
+      billsQuery = billsQuery.eq('financial_year', fy).eq('month', Number(m));
+    }
+
+    const { data: bills, error: billsError } = await billsQuery;
 
     if (billsError) {
       setError(billsError.message);
@@ -127,9 +153,8 @@ export default function SettingsPage() {
           'Naam': c.name || '',
           'Ward': c.ward_number || '',
           'Mobile': c.mobile_number || '',
-          'Mahina': monthNames[b.month] || b.month,
-          'Financial Year': b.financial_year,
-          'Amount (Rs)': b.amount,
+          'Mahina': formatBillPeriod(b),
+          'Amount (Rs)': Number(b.amount),
           'Status': b.status,
           'Payment Mode': b.payment_mode || '',
           'Last Update': b.updated_at ? new Date(b.updated_at).toLocaleString('en-IN') : '',
@@ -144,14 +169,40 @@ export default function SettingsPage() {
       'Mobile': c.mobile_number,
     }));
 
+    const monthlyMap = {};
+    (bills || [])
+      .filter((b) => b.status === 'PAID')
+      .forEach((b) => {
+        const key = `${b.financial_year}-${b.month}`;
+        if (!monthlyMap[key]) {
+          monthlyMap[key] = { month: b.month, financial_year: b.financial_year, total: 0, count: 0 };
+        }
+        monthlyMap[key].total += Number(b.amount);
+        monthlyMap[key].count += 1;
+      });
+
+    const totalRows = Object.values(monthlyMap)
+      .sort((a, b) => getAbsoluteMonthIndex(b.financial_year, b.month) - getAbsoluteMonthIndex(a.financial_year, a.month))
+      .map((m) => ({
+        'Mahina': formatBillPeriod(m),
+        'Total Collected (Rs)': m.total,
+        'Bills Paid': m.count,
+      }));
+
+    const grandTotal = totalRows.reduce((sum, r) => sum + r['Total Collected (Rs)'], 0);
+    totalRows.push({ 'Mahina': 'GRAND TOTAL', 'Total Collected (Rs)': grandTotal, 'Bills Paid': '' });
+
     const wb = XLSX.utils.book_new();
+    const wsTotal = XLSX.utils.json_to_sheet(totalRows);
     const wsConsumers = XLSX.utils.json_to_sheet(consumerRows);
     const wsBills = XLSX.utils.json_to_sheet(billRows);
+    XLSX.utils.book_append_sheet(wb, wsTotal, 'Total');
     XLSX.utils.book_append_sheet(wb, wsConsumers, 'Consumers');
-    XLSX.utils.book_append_sheet(wb, wsBills, 'Sabhi Bills');
+    XLSX.utils.book_append_sheet(wb, wsBills, 'Bills');
 
     const dateStr = new Date().toISOString().slice(0, 10);
-    const fileName = `${panchayat?.name || 'Panchayat'}-Full-Data-${dateStr}.xlsx`;
+    const periodLabel = selectedPeriod === 'ALL' ? 'All' : periodOptions.find((p) => `${p.financial_year}|${p.month}` === selectedPeriod)?.label.replace(/\s/g, '-');
+    const fileName = `${panchayat?.name || 'Panchayat'}-Data-${periodLabel}-${dateStr}.xlsx`;
 
     XLSX.writeFile(wb, fileName);
     setExporting(false);
@@ -244,8 +295,25 @@ export default function SettingsPage() {
               📥 पूरा Data Download करो
             </p>
             <p style={{ fontSize: '12px', color: '#6b7280', marginTop: 0, marginBottom: '10px' }}>
-              Sabhi consumers aur sabhi bills (kisne diya, kisne nahi) ek Excel file me download karo — kisi bhi adhikari ko WhatsApp/email se bhejnе ke liye.
+              Sabhi consumers, sabhi bills, aur mahine-wise total ek Excel file me download karo — kisi bhi adhikari ko WhatsApp/email se bhejने ke liye.
             </p>
+
+            <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>
+              Kis Mahine ka Data Chahiye?
+            </label>
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box', marginBottom: '12px', fontSize: '14px' }}
+            >
+              <option value="ALL">सभी महीने (Sab kuch)</option>
+              {periodOptions.map((p) => (
+                <option key={p.key} value={`${p.financial_year}|${p.month}`}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+
             <button
               onClick={handleExportData}
               disabled={exporting}
@@ -260,7 +328,7 @@ export default function SettingsPage() {
                 width: '100%',
               }}
             >
-              {exporting ? 'Ban raha hai...' : '📥 Poora Data Download Karo (Excel)'}
+              {exporting ? 'Ban raha hai...' : '📥 Data Download Karo (Excel)'}
             </button>
           </div>
         </>
