@@ -9,6 +9,7 @@ import { theme } from '../../lib/theme';
 const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const nameAliases = ['name', 'naam', 'consumername', 'consumer'];
+const fatherAliases = ['fathername', 'fathersname', 'pitanaam', 'pita', 'fname', 'sowo', 'so'];
 const wardAliases = ['ward', 'wardnumber', 'wardno', 'wardn', 'wardnum'];
 const mobileAliases = ['mobile', 'mobilenumber', 'mobileno', 'phone', 'phonenumber', 'contact', 'contactnumber'];
 
@@ -113,6 +114,7 @@ export default function ConsumersPage() {
   const [form, setForm] = useState({
     consumer_id_str: '',
     name: '',
+    father_name: '',
     ward_number: '',
     mobile_number: '',
   });
@@ -202,7 +204,7 @@ export default function ConsumersPage() {
   }, [checkingAuth, panchayatId]);
 
   function resetForm() {
-    setForm({ consumer_id_str: '', name: '', ward_number: '', mobile_number: '' });
+    setForm({ consumer_id_str: '', name: '', father_name: '', ward_number: '', mobile_number: '' });
     setEditingId(null);
     setShowForm(false);
   }
@@ -232,6 +234,7 @@ export default function ConsumersPage() {
     const payload = {
       consumer_id_str: form.consumer_id_str,
       name: form.name,
+      father_name: form.father_name,
       ward_number: parseInt(form.ward_number, 10),
       mobile_number: form.mobile_number,
       panchayat_id: panchayatId,
@@ -257,6 +260,7 @@ export default function ConsumersPage() {
     setForm({
       consumer_id_str: consumer.consumer_id_str,
       name: consumer.name,
+      father_name: consumer.father_name || '',
       ward_number: String(consumer.ward_number),
       mobile_number: consumer.mobile_number,
     });
