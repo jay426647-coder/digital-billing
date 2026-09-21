@@ -41,6 +41,8 @@ const text = {
     addAllBtn: (count) => `सबको (${count}) Add करो`,
     consumerId: 'Consumer ID',
     name: 'नाम',
+    fatherName: 'पिता का नाम',
+    fatherOf: 'पिता:',
     wardNumber: 'वार्ड नंबर',
     mobileNumber: 'मोबाइल नंबर',
     updateBtn: 'Update करो',
@@ -76,6 +78,8 @@ const text = {
     addAllBtn: (count) => `Add All (${count})`,
     consumerId: 'Consumer ID',
     name: 'Name',
+    fatherName: "Father's Name",
+    fatherOf: 'S/O',
     wardNumber: 'Ward Number',
     mobileNumber: 'Mobile Number',
     updateBtn: 'Update',
@@ -335,6 +339,7 @@ export default function ConsumersPage() {
 
         json.forEach((row) => {
           const name = String(extractField(row, nameAliases)).trim();
+          const fatherName = String(extractField(row, fatherAliases)).trim();
           const wardRaw = String(extractField(row, wardAliases)).trim();
           const mobile = String(extractField(row, mobileAliases)).trim();
           const wardNum = parseInt(wardRaw, 10);
@@ -344,7 +349,7 @@ export default function ConsumersPage() {
             return;
           }
 
-          parsed.push({ name, ward_number: wardNum, mobile_number: mobile });
+          parsed.push({ name, father_name: fatherName, ward_number: wardNum, mobile_number: mobile });
         });
 
         if (parsed.length === 0) {
@@ -381,6 +386,7 @@ export default function ConsumersPage() {
       return {
         consumer_id_str: prefix + String(num).padStart(3, '0'),
         name: row.name,
+        father_name: row.father_name || '',
         ward_number: row.ward_number,
         mobile_number: row.mobile_number,
         panchayat_id: panchayatId,
@@ -599,6 +605,16 @@ export default function ConsumersPage() {
                   style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
                 />
               </div>
+              
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.fatherName}</label>
+                <input
+                  type="text"
+                  value={form.father_name}
+                  onChange={(e) => setForm({ ...form, father_name: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', boxSizing: 'border-box' }}
+                />
+              </div>
 
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ fontSize: '13px', color: '#374151', display: 'block', marginBottom: '4px' }}>{t.wardNumber}</label>
@@ -659,6 +675,11 @@ export default function ConsumersPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <p style={{ margin: 0, fontWeight: 'bold', color: theme.textDark }}>{c.name}</p>
+                        {c.father_name && (
+                          <p style={{ margin: '1px 0 0 0', fontSize: '11px', color: theme.textMuted }}>
+                            {t.fatherOf} {c.father_name}
+                          </p>
+                        )}
                         <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: theme.textMuted }}>
                           ID: {c.consumer_id_str} • {t.ward} {c.ward_number} • {c.mobile_number}
                         </p>
