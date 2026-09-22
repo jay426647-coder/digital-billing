@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.vercel.digital_billing_mu.twa",
+    "sha256_cert_fingerprints": ["B6:76:BD:88:8F:6D:94:01:E7:59:38:3D:CA:24:5E:53:56:C3:0A:8C:04:97:24:A7:F0:D7:1B:F6:8C:AB:FB:87"]
+  }
+}]
